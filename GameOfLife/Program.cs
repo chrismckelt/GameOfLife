@@ -12,7 +12,7 @@ namespace GameOfLife
    /// </summary>
     class Program
    {
-       private static int _generations = 3;
+       private static int _generations = 300;
        private static string _sampleInput = @"
 10100
 00100
@@ -59,7 +59,7 @@ namespace GameOfLife
                    sample = _sampleInput;
                    break;
                case "r":
-                   sample = GenerateRandomString(30, 40);
+                   sample = GenerateRandomString(75, 75);
                    break;
                default:
                    try
@@ -161,7 +161,7 @@ namespace GameOfLife
            Console.ForegroundColor = ConsoleColor.White;
            Console.BackgroundColor = ConsoleColor.Black;
            Console.WindowLeft = Console.WindowTop = 0;
-           Console.WindowWidth = 100;
+           Console.WindowWidth = 80;
            Console.WindowHeight = 80;
        }
 

@@ -81,7 +81,7 @@ namespace GameOfLife
             int previousRound = roundToCreate - 1;
             var spawnedCells = new List<Cell>();
 
-            foreach (var cell in Cells[previousRound])
+            foreach (var cell in Cells[previousRound].AsParallel())
             {
                 var neighbours = GetNeighbours(previousRound, cell);
                 int alive = neighbours.Count(a=>a.Health == Health.Alive);
