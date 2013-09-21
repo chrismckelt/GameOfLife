@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace GameOfLife
@@ -12,7 +15,7 @@ namespace GameOfLife
    /// </summary>
     class Program
    {
-       private static int _generations = 300;
+       private static int _rounds = 3000;
        private static string _sampleInput = @"
 10100
 00100
@@ -23,7 +26,14 @@ namespace GameOfLife
 1010000100101010111100111
 0110010101000111001010101
 0101111000101010001101010
+1001010110101110101011010
+1100101010110010110010110
 ";
+
+       private const string Title = "Conway's Game of Life";
+       private static bool _runRandomSample = false;
+       private static bool _verifySample1 = false;
+       private static Simulator _simulator;
 
 
        static void Main(string[] args)
@@ -31,36 +41,61 @@ namespace GameOfLife
            Setup();
            ShowHeader();
            ShowHelp();
-
-           string sample = string.Empty;
-           sample = GetInputSample(sample);
-           
-           Console.ForegroundColor = ConsoleColor.White;
-
+           string sample = GetInputSample();
            IList<Cell> inputCells = ParseInput(sample);
-           var simulator = new Simulator(_generations,inputCells);
-           simulator.OnNotifyMessage += Console.WriteLine;
-           simulator.OnNotifyResult += PrintResult;
-           simulator.Run();
+
+           _simulator = new Simulator(_rounds,inputCells);
+           _simulator.OnNotifyMessage += Console.WriteLine;
+           _simulator.OnNotifyResult += PrintResult;
+           _simulator.NotifyOnceEachResultSetComplete = !_runRandomSample;
+           Console.WriteLine("Generating results...");
+           //Console.WriteLine(sample);
+           _simulator.Run();
 
            Console.ForegroundColor = ConsoleColor.DarkGreen;
-           Console.WriteLine("Time taken: {0}", simulator.TimeTaken);
+           Console.WriteLine("Time taken: {0}", _simulator.TimeTaken);
 
+           VerifySample1();
            Pause();
+
+           if (_runRandomSample)
+           {
+               Console.ForegroundColor = ConsoleColor.White;
+               Console.WriteLine("Press any key to stop");
+               do
+               {
+                   while (!Console.KeyAvailable)
+                   {
+                       for (int i = 0; i < _simulator.Cells.Count; i++)
+                       {
+                           PrintResult(_simulator.Cells[i]);
+                           Thread.Sleep(500);
+                       }
+                   }
+               } while (Console.ReadKey(true).Key != ConsoleKey.Escape);
+               
+           }
        }
 
-       private static string GetInputSample(string sample)
+       private static string GetInputSample()
        {
            var input = Console.ReadLine();
 
            switch (input.ToLowerInvariant())
            {
                case "1":
-                   sample = _sampleInput;
-                   break;
+                   _verifySample1 = true;
+                   return _sampleInput;
+               case "2":
+                   return _sampleInput2;
                case "r":
-                   sample = GenerateRandomString(75, 75);
-                   break;
+                   _runRandomSample = true;
+                   var rnd = new Random();
+                   int height = rnd.Next(Console.WindowHeight, Console.LargestWindowHeight-5);
+                   int width = rnd.Next(Console.WindowWidth, Console.LargestWindowWidth-5);
+                   Console.SetWindowSize(width,height);
+                   return GenerateRandomString(50,50);
+                   //return GenerateRandomString(10, 10);
                default:
                    try
                    {
@@ -69,7 +104,7 @@ namespace GameOfLife
                            ShowHelp();
                        }
 
-                       sample = File.ReadAllText(input);
+                       return File.ReadAllText(input);
                    }
                    catch (Exception ex)
                    {
@@ -77,11 +112,13 @@ namespace GameOfLife
                    }
                    break;
            }
-           return sample;
+           throw new ArgumentNullException("No sample");
        }
 
        private static void PrintResult(IList<Cell> result)
        {
+           if (_runRandomSample)
+               Console.Clear();
 
            var sb = new StringBuilder();
            var gr = from r in result group r by r.Y;
@@ -95,7 +132,9 @@ namespace GameOfLife
                sb.AppendLine();
            }
 
+           //Console.Beep(37,100);
            Console.Write(sb.ToString());
+           
        }
 
        private static IList<Cell> ParseInput(string input)
@@ -158,28 +197,30 @@ namespace GameOfLife
 
        private static void Setup()
        {
+           Console.Title = Title;
            Console.ForegroundColor = ConsoleColor.White;
            Console.BackgroundColor = ConsoleColor.Black;
            Console.WindowLeft = Console.WindowTop = 0;
-           Console.WindowWidth = 80;
+           Console.WindowWidth = 100;
            Console.WindowHeight = 80;
        }
 
        private static void ShowHeader()
-       {          
-           Console.WriteLine("Conway's Game of Life");
+       {
+           Console.WriteLine(Title);
            Console.WriteLine("------------------------");
            Console.WriteLine("Sample by Chris McKelt");
-         
        }
 
        private static void ShowHelp()
        {
            Console.ForegroundColor = ConsoleColor.DarkGray;
            Console.WriteLine("Enter:");
-           Console.WriteLine("-- '1' for test sample");
-           Console.WriteLine("-- paste a file path for text file input");
-           Console.WriteLine("-- 'R' for a random sample");
+           Console.WriteLine("-- '1' for test sample 1");
+           Console.WriteLine("-- '2' for test sample 2");
+           Console.WriteLine("-- 'r' for a random sample");
+           Console.WriteLine("-- or paste a file path for text file input");
+           Console.ForegroundColor = ConsoleColor.White;
        }
 
        private static void ShowError(string msg, Exception e)
@@ -217,6 +258,58 @@ namespace GameOfLife
            }
 
            return sb.ToString();
+       }
+
+       private static void VerifySample1()
+       {
+           if (_verifySample1)
+           {
+               const string expected1 = @"
+01000
+00110
+01000
+";
+
+               const string expected2 = @"
+00100
+01100
+00100
+";
+
+               const string expected3 = @"
+01100
+01110
+01100
+";
+               var expectedCells = new Dictionary<int, IList<Cell>>
+                   {
+                       {1, ParseInput(expected1)},
+                       {2, ParseInput(expected2)},
+                       {3, ParseInput(expected3)}
+                   };
+
+               foreach (var expectedCellList in expectedCells.Where(a => a.Key > 0).GroupBy(b => b.Key)) // skip zero original generation
+               {
+                   foreach (var kvp in expectedCellList)
+                   {
+                       foreach (var expectedCell in kvp.Value)
+                       {
+                           var actualCell =
+                               _simulator.Cells[kvp.Key].SingleOrDefault(a => a.X == expectedCell.X && a.Y == expectedCell.Y);
+
+                           if (!actualCell.Equals(expectedCell))
+                           {
+                               Console.ForegroundColor = ConsoleColor.DarkRed;
+                               Console.WriteLine("Failed");
+                               Console.WriteLine("Excepted   {0}  X: {1}  Y: {1} Health:{2}", expectedCell.X, expectedCell.Y, expectedCell.Health);
+                               Console.WriteLine("Actual     {0}  X: {1}  Y: {1} Health:{2}", actualCell.X, actualCell.Y, actualCell.Health);
+                               Console.WriteLine();
+                           }
+                       }
+                   }
+               }
+               Console.WriteLine("Sample 1 test passed");
+           }
        }
    }
 }
