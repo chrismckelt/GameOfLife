@@ -12,7 +12,7 @@ namespace GameOfLife
         public LargeSimulator(int generations, IList<Cell> inputCells)
             : base(generations, inputCells)
         {
-            Cells = new Dictionary<int, IList<Cell>>(); // TODO make this thread safe when concurreny is implemented - Concurrent Dic + ConcurrentBag - refactor base
+            Cells = new Dictionary<int, IList<Cell>>(); // TODO make this thread safe when concurrency is implemented - Concurrent Dic + ConcurrentBag - refactor base
             Cells.Add(0, inputCells);
         }
 
