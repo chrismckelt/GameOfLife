@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -6,11 +7,12 @@ using System.Threading.Tasks;
 
 namespace GameOfLife
 {
-    public class Simulator : SimulatorBase
+    public class LargeSimulator : SimulatorBase
     {
-        public Simulator(int generations, IList<Cell> inputCells) : base(generations, inputCells)
+        public LargeSimulator(int generations, IList<Cell> inputCells)
+            : base(generations, inputCells)
         {
-            Cells = new Dictionary<int, IList<Cell>>(); 
+            Cells = new Dictionary<int, IList<Cell>>(); // TODO make this thread safe when concurreny is implemented - Concurrent Dic + ConcurrentBag - refactor base
             Cells.Add(0, inputCells);
         }
 
@@ -18,7 +20,6 @@ namespace GameOfLife
         {
             _totalTime = new Stopwatch();
             _totalTime.Start();
-            SendMessage("Total Rounds: " + Rounds);
 
             for (int i = 0; i < Rounds; i++)
             {
@@ -35,7 +36,6 @@ namespace GameOfLife
                     string ts = string.Format("{0:00} ms", stopwatch.ElapsedMilliseconds);
                     string msg = string.Format("Created: {0} in {1}", (i + 1), ts);
                     SendMessage(msg);
-                    SendMessage(msg);
                 }
             }
             _totalTime.Stop();
@@ -51,6 +51,15 @@ namespace GameOfLife
             }
         }
 
+        public string TimeTaken
+        {
+            get
+            {
+                {
+                    return String.Format("{0:00} ms", _totalTime.ElapsedMilliseconds);
+                }
+            }
+        }
 
         /// <summary>
         ///     Any live cell with fewer than two live neighbours dies, as if caused by under-population.
@@ -63,54 +72,58 @@ namespace GameOfLife
             int previousRound = roundToCreate - 1;
             var spawnedCells = new List<Cell>();
 
-            foreach (Cell cell in Cells[previousRound]) 
+            foreach (Cell cell in Cells[previousRound]) // TODO parallelise this Parrallel.For
             {
-                IEnumerable<Cell> neighbours = GetNeighbours(previousRound, cell); 
-                int alive = neighbours.Count(a => a.Health == Health.Alive);
-                //  Console.WriteLine("Alive Count:{0}", alive);
+                Task.Factory.StartNew(() =>
+                    {
+                        IEnumerable<Cell> neighbours = GetNeighbours(previousRound, cell); //TODO dont use task factory use async await
+                        int alive = neighbours.Count(a => a.Health == Health.Alive);
+                        //  Console.WriteLine("Alive Count:{0}", alive);
 
-                if (cell.Health == Health.Alive)
-                {
-                    if (alive < 2)
-                    {
-                        //Any live cell with fewer than two live neighbours dies, as if caused by under-population.
-                        spawnedCells.Add(new Cell(cell.X, cell.Y, Health.Dead));
+                        if (cell.Health == Health.Alive)
+                        {
+                            if (alive < 2)
+                            {
+                                //Any live cell with fewer than two live neighbours dies, as if caused by under-population.
+                                spawnedCells.Add(new Cell(cell.X, cell.Y, Health.Dead));
+                            }
+                            else if (alive == 2 || alive == 3)
+                            {
+                                //Any live cell with two or three live neighbours lives on to the next round.
+                                spawnedCells.Add(cell);
+                            }
+                            else if (alive > 3)
+                            {
+                                //Any live cell with more than three live neighbours dies, as if by overcrowding.
+                                spawnedCells.Add(new Cell(cell.X, cell.Y, Health.Dead));
+                            }
+                        }
+                        else
+                        {
+                            spawnedCells.Add(alive == 3
+                                                 ? new Cell(cell.X, cell.Y, Health.Alive)
+                                                 : new Cell(cell.X, cell.Y, Health.Dead));
+                        }
                     }
-                    else if (alive == 2 || alive == 3)
-                    {
-                        //Any live cell with two or three live neighbours lives on to the next round.
-                        spawnedCells.Add(cell);
-                    }
-                    else if (alive > 3)
-                    {
-                        //Any live cell with more than three live neighbours dies, as if by overcrowding.
-                        spawnedCells.Add(new Cell(cell.X, cell.Y, Health.Dead));
-                    }
-                }
-                else
-                {
-                    spawnedCells.Add(alive == 3
-                                         ? new Cell(cell.X, cell.Y, Health.Alive)
-                                         : new Cell(cell.X, cell.Y, Health.Dead));
-                }
+                    ).Wait();
             }
-      
+
             //Debug.Assert(Cells[previousRound].Count == spawnedCells.Count);
             Cells.Add(roundToCreate, spawnedCells);
 
             if (spawnedCells.All(a => a.Health != Health.Alive))
             {
                 AllDead = true;
-
                 SendMessage("Died in round " + roundToCreate);
             }
 
             if (NotifyOnceEachResultSetComplete)
-                SendResult(spawnedCells);
+                SendResult(spawnedCells.ToList());
         }
 
         private IEnumerable<Cell> GetNeighbours(int round, Cell cell)
         {
+            //TODO async await these calls (RX extensions?)
             var list = new List<Cell>
                 {
                     Cells[round].TopLeft(cell),
@@ -123,10 +136,8 @@ namespace GameOfLife
                     Cells[round].BottomRight(cell)
                 };
 
-            
 
             return list;
         }
-
     }
 }

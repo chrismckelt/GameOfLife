@@ -15,14 +15,15 @@ namespace GameOfLife
    /// </summary>
     class Program
    {
-       private static int _rounds = 3000;
-       private static string _sampleInput = @"
+       private const int ROUNDS = 10;
+       private const string LOG_DIRECTORY = @"D:\Development\GameOfLife\Log\";
+       private const string SAMPLE_INPUT = @"
 10100
 00100
 10100
 ";
 
-       private static string _sampleInput2 = @"
+       private const string SAMPLE_INPUT2 = @"
 1010000100101010111100111
 0110010101000111001010101
 0101111000101010001101010
@@ -30,11 +31,13 @@ namespace GameOfLife
 1100101010110010110010110
 ";
 
-       private const string Title = "Conway's Game of Life";
+       private const string TITLE = "Conway's Game of Life";
        private static bool _runRandomSample = false;
        private static bool _verifySample1 = false;
-       private static Simulator _simulator;
-
+       private static SimulatorBase _simulator;
+       private static StringBuilder _log;
+       private static string _logFile;
+      
 
        static void Main(string[] args)
        {
@@ -44,8 +47,18 @@ namespace GameOfLife
            string sample = GetInputSample();
            IList<Cell> inputCells = ParseInput(sample);
 
-           _simulator = new Simulator(_rounds,inputCells);
-           _simulator.OnNotifyMessage += Console.WriteLine;
+           if (inputCells.Count >= 1000)
+           {
+               _simulator = new LargeSimulator(ROUNDS, inputCells);
+               Console.WriteLine("Using the large data simulator");
+           }
+           else
+           {
+               _simulator = new Simulator(ROUNDS, inputCells);
+               Console.WriteLine("Using the normal simulator");
+           }
+          
+           _simulator.OnNotifyMessage += WriteLog;
            _simulator.OnNotifyResult += PrintResult;
            _simulator.NotifyOnceEachResultSetComplete = !_runRandomSample;
            Console.WriteLine("Generating results...");
@@ -53,9 +66,10 @@ namespace GameOfLife
            _simulator.Run();
 
            Console.ForegroundColor = ConsoleColor.DarkGreen;
-           Console.WriteLine("Time taken: {0}", _simulator.TimeTaken);
+           WriteLog(string.Format("Time taken: {0}", _simulator.TimeTaken));
 
            VerifySample1();
+           WriteLogFile();
            Pause();
 
            if (_runRandomSample)
@@ -77,6 +91,7 @@ namespace GameOfLife
            }
        }
 
+
        private static string GetInputSample()
        {
            var input = Console.ReadLine();
@@ -85,17 +100,18 @@ namespace GameOfLife
            {
                case "1":
                    _verifySample1 = true;
-                   return _sampleInput;
+                   return SAMPLE_INPUT;
                case "2":
-                   return _sampleInput2;
+                   return SAMPLE_INPUT2;
                case "r":
                    _runRandomSample = true;
                    var rnd = new Random();
-                   int height = rnd.Next(Console.WindowHeight, Console.LargestWindowHeight-5);
-                   int width = rnd.Next(Console.WindowWidth, Console.LargestWindowWidth-5);
-                   Console.SetWindowSize(width,height);
-                   return GenerateRandomString(50,50);
-                   //return GenerateRandomString(10, 10);
+                   int height = rnd.Next(5, 30);
+                   int width = rnd.Next(5, 30);
+                   if (height > Console.WindowHeight && width > Console.WindowWidth)
+                        Console.SetWindowSize(width,height);
+                   return GenerateRandomString(80,80);
+                   //return GenerateRandomString(height, width);
                default:
                    try
                    {
@@ -197,17 +213,22 @@ namespace GameOfLife
 
        private static void Setup()
        {
-           Console.Title = Title;
+           Console.Title = TITLE;
            Console.ForegroundColor = ConsoleColor.White;
            Console.BackgroundColor = ConsoleColor.Black;
            Console.WindowLeft = Console.WindowTop = 0;
            Console.WindowWidth = 100;
            Console.WindowHeight = 80;
+
+           _log = new StringBuilder();
+           if (!Directory.Exists(LOG_DIRECTORY))
+               ShowError("Log directory does not exist " + LOG_DIRECTORY, new DirectoryNotFoundException(LOG_DIRECTORY));
+           
        }
 
        private static void ShowHeader()
        {
-           Console.WriteLine(Title);
+           Console.WriteLine(TITLE);
            Console.WriteLine("------------------------");
            Console.WriteLine("Sample by Chris McKelt");
        }
@@ -258,6 +279,26 @@ namespace GameOfLife
            }
 
            return sb.ToString();
+       }
+
+       private static void WriteLog(string msg)
+       {
+           Console.WriteLine(msg);
+
+           _log.AppendLine(msg);
+       }
+
+       private static void WriteLogFile()
+       {
+           try
+           {
+               _logFile = Path.Combine(LOG_DIRECTORY, string.Format("gameoflife-{0:yyyy-MM-dd_hh-mm-ss-tt}.log", DateTime.Now));
+              File.WriteAllText(_logFile, _log.ToString());
+           }
+           catch (Exception ex)
+           {
+               ShowError("Log file creation failed", ex);
+           }
        }
 
        private static void VerifySample1()
