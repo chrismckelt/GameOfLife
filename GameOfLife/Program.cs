@@ -48,7 +48,8 @@ namespace GameOfLife
            var inputCells = ParseInput(sample);
 
            var items = inputCells as Cell[] ?? inputCells.ToArray();
-           if (items.Count() >= 1024)  // find out L1 cache size for box - http://www.cpuid.com/softwares/cpu-z.html
+           var objectCount = items.Sum(a => a.X * a.Y);
+           if (objectCount >= (2048 * 2048))  // find out L1 cache size (sysinternals)
            {
                _simulator = new LargeSimulator(ROUNDS, items);
                Console.WriteLine("Using the large data simulator");
