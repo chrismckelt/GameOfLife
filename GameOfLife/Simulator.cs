@@ -8,9 +8,9 @@ namespace GameOfLife
 {
     public class Simulator : SimulatorBase
     {
-        public Simulator(int generations, IList<Cell> inputCells) : base(generations, inputCells)
+        public Simulator(int generations, IEnumerable<Cell> inputCells) : base(generations, inputCells)
         {
-            Cells = new Dictionary<int, IList<Cell>>(); 
+            Cells = new Dictionary<int, IEnumerable<Cell>>(); 
             Cells.Add(0, inputCells);
         }
 
@@ -34,7 +34,6 @@ namespace GameOfLife
                 {
                     string ts = string.Format("{0:00} ms", stopwatch.ElapsedMilliseconds);
                     string msg = string.Format("Created: {0} in {1}", (i + 1), ts);
-                    SendMessage(msg);
                     SendMessage(msg);
                 }
             }

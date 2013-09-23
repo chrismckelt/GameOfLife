@@ -9,10 +9,10 @@ namespace GameOfLife
 {
     public class LargeSimulator : SimulatorBase
     {
-        public LargeSimulator(int generations, IList<Cell> inputCells)
+        public LargeSimulator(int generations, IEnumerable<Cell> inputCells)
             : base(generations, inputCells)
         {
-            Cells = new Dictionary<int, IList<Cell>>(); // TODO make this thread safe when concurrency is implemented - Concurrent Dic + ConcurrentBag - refactor base
+            Cells = new Dictionary<int, IEnumerable<Cell>>(); // TODO make this thread safe when concurrency is implemented - Concurrent Dic + ConcurrentBag - refactor base
             Cells.Add(0, inputCells);
         }
 
@@ -70,7 +70,7 @@ namespace GameOfLife
         private void SpawnRound(int roundToCreate)
         {
             int previousRound = roundToCreate - 1;
-            var spawnedCells = new List<Cell>();
+            var spawnedCells = new HashSet<Cell>();
 
             foreach (Cell cell in Cells[previousRound]) // TODO parallelise this Parrallel.For
             {
@@ -124,7 +124,7 @@ namespace GameOfLife
         private IEnumerable<Cell> GetNeighbours(int round, Cell cell)
         {
             //TODO async await these calls (RX extensions?)
-            var list = new List<Cell>
+            var list = new HashSet<Cell>()
                 {
                     Cells[round].TopLeft(cell),
                     Cells[round].Top(cell),

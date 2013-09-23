@@ -9,7 +9,7 @@ namespace GameOfLife
 {
     public abstract class SimulatorBase
     {
-        protected SimulatorBase(int generations, IList<Cell> inputCells)
+        protected SimulatorBase(int generations, IEnumerable<Cell> inputCells)
         {
             if (generations < 1) throw new ArgumentException("Rounds must be greater than zero");
 
@@ -19,7 +19,7 @@ namespace GameOfLife
             Rounds = generations;
         }
 
-        public IDictionary<int, IList<Cell>> Cells;
+        public IDictionary<int, IEnumerable<Cell>> Cells;
 
         public int Rounds { get; protected set; }
 
@@ -31,7 +31,7 @@ namespace GameOfLife
 
         public delegate void NotifyMessage(string msg);
 
-        public delegate void NotifyResult(IList<Cell> cells);
+        public delegate void NotifyResult(IEnumerable<Cell> cells);
 
         public event NotifyMessage OnNotifyMessage;
 
@@ -57,7 +57,7 @@ namespace GameOfLife
                 OnNotifyMessage(msg);
         }
 
-        protected void SendResult(IList<Cell> cells)
+        protected void SendResult(IEnumerable<Cell> cells)
         {
             if (OnNotifyResult != null)
                 OnNotifyResult(cells);

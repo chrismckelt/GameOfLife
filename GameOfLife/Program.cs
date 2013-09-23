@@ -45,16 +45,17 @@ namespace GameOfLife
            ShowHeader();
            ShowHelp();
            string sample = GetInputSample();
-           IList<Cell> inputCells = ParseInput(sample);
+           var inputCells = ParseInput(sample);
 
-           if (inputCells.Count >= 1000)
+           var items = inputCells as Cell[] ?? inputCells.ToArray();
+           if (items.Count() >= 1024)  // find out L1 cache size for box - http://www.cpuid.com/softwares/cpu-z.html
            {
-               _simulator = new LargeSimulator(ROUNDS, inputCells);
+               _simulator = new LargeSimulator(ROUNDS, items);
                Console.WriteLine("Using the large data simulator");
            }
            else
            {
-               _simulator = new Simulator(ROUNDS, inputCells);
+               _simulator = new Simulator(ROUNDS, items);
                Console.WriteLine("Using the normal simulator");
            }
           
@@ -131,7 +132,7 @@ namespace GameOfLife
            throw new ArgumentNullException("No sample");
        }
 
-       private static void PrintResult(IList<Cell> result)
+       private static void PrintResult(IEnumerable<Cell> result)
        {
            if (_runRandomSample)
                Console.Clear();
@@ -153,7 +154,7 @@ namespace GameOfLife
            
        }
 
-       private static IList<Cell> ParseInput(string input)
+       private static IEnumerable<Cell> ParseInput(string input)
        {
            var cells = new List<Cell>();
            int lineCount = 1;
@@ -322,7 +323,7 @@ namespace GameOfLife
 01110
 01100
 ";
-               var expectedCells = new Dictionary<int, IList<Cell>>
+               var expectedCells = new Dictionary<int, IEnumerable<Cell>>
                    {
                        {1, ParseInput(expected1)},
                        {2, ParseInput(expected2)},
