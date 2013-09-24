@@ -1,19 +1,24 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace GameOfLife
 {
     public class LargeSimulator : SimulatorBase
     {
+        private IList<Task> _tasks;
+
         public LargeSimulator(int generations, IEnumerable<Cell> inputCells)
             : base(generations, inputCells)
         {
-            Cells = new Dictionary<int, IEnumerable<Cell>>(); // TODO make this thread safe when concurrency is implemented - Concurrent Dic + ConcurrentBag - refactor base
+            Cells = new ConcurrentDictionary<int, IEnumerable<Cell>>(); 
             Cells.Add(0, inputCells);
+            _tasks = new List<Task>();
         }
 
         public override void Run()
@@ -51,63 +56,30 @@ namespace GameOfLife
             }
         }
 
-        public string TimeTaken
-        {
-            get
-            {
-                {
-                    return String.Format("{0:00} ms", _totalTime.ElapsedMilliseconds);
-                }
-            }
-        }
-
         /// <summary>
         ///     Any live cell with fewer than two live neighbours dies, as if caused by under-population.
         ///     Any live cell with two or three live neighbours lives on to the next round.
         ///     Any live cell with more than three live neighbours dies, as if by overcrowding.
         ///     Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
         /// </summary>
-        private void SpawnRound(int roundToCreate)
+        private async void SpawnRound(int roundToCreate)
         {
             int previousRound = roundToCreate - 1;
-            var spawnedCells = new HashSet<Cell>();
+            var spawnedCells = new ConcurrentBag<Cell>();
 
-            foreach (Cell cell in Cells[previousRound]) // TODO parallelise this Parrallel.For
+            foreach (var cell in Cells[previousRound])
             {
-                Task.Factory.StartNew(() =>
+                var local = cell;
+                var task = Task.Run(() =>
                     {
-                        IEnumerable<Cell> neighbours = GetNeighbours(previousRound, cell); //TODO dont use task factory use async await
-                        int alive = neighbours.Count(a => a.Health == Health.Alive);
-                        //  Console.WriteLine("Alive Count:{0}", alive);
-
-                        if (cell.Health == Health.Alive)
-                        {
-                            if (alive < 2)
-                            {
-                                //Any live cell with fewer than two live neighbours dies, as if caused by under-population.
-                                spawnedCells.Add(new Cell(cell.X, cell.Y, Health.Dead));
-                            }
-                            else if (alive == 2 || alive == 3)
-                            {
-                                //Any live cell with two or three live neighbours lives on to the next round.
-                                spawnedCells.Add(cell);
-                            }
-                            else if (alive > 3)
-                            {
-                                //Any live cell with more than three live neighbours dies, as if by overcrowding.
-                                spawnedCells.Add(new Cell(cell.X, cell.Y, Health.Dead));
-                            }
-                        }
-                        else
-                        {
-                            spawnedCells.Add(alive == 3
-                                                 ? new Cell(cell.X, cell.Y, Health.Alive)
-                                                 : new Cell(cell.X, cell.Y, Health.Dead));
-                        }
-                    }
-                    ).Wait();
+                        var bb = BirthCell(previousRound, local);
+                        spawnedCells.Add(bb);
+                    });
+                _tasks.Add(task);
             }
 
+
+            Task.WhenAll(_tasks);
             //Debug.Assert(Cells[previousRound].Count == spawnedCells.Count);
             Cells.Add(roundToCreate, spawnedCells);
 
@@ -121,22 +93,74 @@ namespace GameOfLife
                 SendResult(spawnedCells.ToList());
         }
 
-        private IEnumerable<Cell> GetNeighbours(int round, Cell cell)
+        private Cell BirthCell(int previousRound, Cell local)
         {
-            //TODO async await these calls (RX extensions?)
-            var list = new HashSet<Cell>()
+            var task = Task.Run(() => GetNeighbours(previousRound, local));
+            var neighbours = task.Result;
+            task.Wait();
+            int alive = neighbours.Count(a => a.Health == Health.Alive);
+            //  Console.WriteLine("Alive Count:{0}", alive);
+
+            if (local.Health == Health.Alive)
+            {
+                if (alive < 2)
                 {
-                    Cells[round].TopLeft(cell),
-                    Cells[round].Top(cell),
-                    Cells[round].TopRight(cell),
-                    Cells[round].Left(cell),
-                    Cells[round].Right(cell),
-                    Cells[round].BottomLeft(cell),
-                    Cells[round].Bottom(cell),
-                    Cells[round].BottomRight(cell)
+                    //Any live cell with fewer than two live neighbours dies, as if caused by under-population.
+                    return new Cell(local.X, local.Y, Health.Dead);
+                }
+                else if (alive == 2 || alive == 3)
+                {
+                    //Any live cell with two or three live neighbours lives on to the next round.
+                    return new Cell(local.X, local.Y, local.Health);
+                }
+                else if (alive > 3)
+                {
+                    //Any live cell with more than three live neighbours dies, as if by overcrowding.
+                     return new Cell(local.X, local.Y, Health.Dead);
+                }
+            }
+            else
+            {
+                if (alive == 3)
+                {
+                    return new Cell(local.X, local.Y, Health.Alive);
+                }
+                else
+                {
+                    return new Cell(local.X, local.Y, Health.Dead);
+                }
+            }
+            throw new ApplicationException("Nothing configured for this cell type?");
+        }
+
+        private async Task<List<Cell>> GetNeighbours(int round, Cell cell)
+        {
+            var t1 = Cells[round].TopLeftAsync(cell);
+            var t2 = Cells[round].TopLeftAsync(cell);
+            var t3 = Cells[round].TopAsync(cell);
+            var t4 = Cells[round].TopRightAsync(cell);
+            var t5 = Cells[round].LeftAsync(cell);
+            var t6 = Cells[round].RightAsync(cell);
+            var t7 = Cells[round].BottomLeftAsync(cell);
+            var t8 = Cells[round].BottomAsync(cell);
+            var t9 = Cells[round].BottomRightAsync(cell);
+
+            var tasks = new List<Task>(){t1, t2, t3, t4, t5, t6, t7, t8, t9};
+
+            var list = new List<Cell>()
+                {
+                    await t1,
+                    await t2,
+                    await t3,
+                    await t4,
+                    await t5,
+                    await t6,
+                    await t7,
+                    await t8,
+                    await t9
                 };
 
-
+            Task.WaitAll(tasks.ToArray());
             return list;
         }
     }

@@ -78,7 +78,7 @@ namespace GameOfLife
                     else if (alive == 2 || alive == 3)
                     {
                         //Any live cell with two or three live neighbours lives on to the next round.
-                        spawnedCells.Add(cell);
+                        spawnedCells.Add(new Cell(cell.X, cell.Y, cell.Health));
                     }
                     else if (alive > 3)
                     {
