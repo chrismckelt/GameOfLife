@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -48,8 +50,8 @@ namespace GameOfLife
            var inputCells = ParseInput(sample);
 
            var items = inputCells as Cell[] ?? inputCells.ToArray();
-           var objectCount = items.Sum(a => a.X * a.Y);
-           if (objectCount >= (2048 * 2048))  // find out L1 cache size (sysinternals)
+           var objectCount = items.Count()*GetCellSize();
+           if (objectCount >= (1024 * 1024))  // find out L1 cache size (sysinternals)
            {
                _simulator = new LargeSimulator(ROUNDS, items);
                Console.WriteLine("Using the large data simulator");
@@ -90,6 +92,14 @@ namespace GameOfLife
                    }
                } while (Console.ReadKey(true).Key != ConsoleKey.Escape);
                
+           }
+       }
+
+       private static decimal GetCellSize()
+       {
+           unsafe
+           {
+               return sizeof(Cell);
            }
        }
 
@@ -352,6 +362,16 @@ namespace GameOfLife
                    }
                }
                Console.WriteLine("Sample 1 test passed");
+           }
+       }
+
+
+       public static int GetSizeOfObject(object obj)
+       {
+
+           unsafe
+           {
+               return sizeof(Cell);
            }
        }
    }
