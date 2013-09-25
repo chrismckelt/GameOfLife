@@ -65,7 +65,7 @@ namespace GameOfLife
         private void SpawnRound(int roundToCreate)
         {
             int previousRound = roundToCreate - 1;
-            var spawnedCells = new List<Cell>();
+            var spawnedCells = new ConcurrentBag<Cell>();
 
             Parallel.ForEach(Cells[previousRound], cell =>
             {
