@@ -180,7 +180,8 @@ namespace GameOfLife
        private static SimulatorBase _simulator;
        private static StringBuilder _log;
        private static string _logFile;
-      
+       private static decimal _sampleSize;
+
 
        static void Main(string[] args)
        {
@@ -194,9 +195,9 @@ namespace GameOfLife
            var inputCells = ParseInput(sample);
 
            var items = inputCells as Cell[] ?? inputCells.ToArray();
-           var objectCount = items.Count()*GetCellSize();
-          if (objectCount >= (65536))  // find out L1 cache size (sysinternals or http://chocolatey.org/packages/cpu-z)
-        // if (true)
+           _sampleSize = items.Count();
+           if (_sampleSize >= (1024))  // optimise for L1 cache size (sysinternals or http://chocolatey.org/packages/cpu-z)
+       //  if (false)
            {
                _simulator = new LargeSimulator(ROUNDS, items);
                WriteLog("LargeSimulator");
@@ -274,7 +275,7 @@ namespace GameOfLife
                    int width = rnd.Next(30, 80);
                    if (height > Console.WindowHeight && width > Console.WindowWidth)
                         Console.SetWindowSize(width,height);
-                   sample =  GenerateRandomString(120,80);
+                   sample =  GenerateRandomString(25,25);
                    //var sample =  GenerateRandomString(height, width);
                    WriteLog("Random Sample: " + sample);
                    return sample;
@@ -458,7 +459,8 @@ namespace GameOfLife
        {
            try
            {
-               _logFile = Path.Combine(LOG_DIRECTORY, string.Format("gameoflife-{0:yyyy-MM-dd_hh-mm-ss-tt}.log", DateTime.Now));
+               string fileName = string.Format("{0}{1}{2}{3}{4}{5}{6}{7}.log", "GameOfLife_", DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, "_", DateTime.Now.ToString("hh_mm"), "_sample_size_", _sampleSize);
+               _logFile = Path.Combine(LOG_DIRECTORY, fileName);
               File.WriteAllText(_logFile, _log.ToString());
            }
            catch (Exception ex)

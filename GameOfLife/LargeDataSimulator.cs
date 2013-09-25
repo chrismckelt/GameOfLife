@@ -11,14 +11,14 @@ namespace GameOfLife
 {
     public class LargeSimulator : SimulatorBase
     {
-        private IList<Task> _tasks;
+        private ConcurrentBag<Task> _tasks;
 
         public LargeSimulator(int generations, IEnumerable<Cell> inputCells)
             : base(generations, inputCells)
         {
             Cells = new ConcurrentDictionary<int, IEnumerable<Cell>>(); 
             Cells.Add(0, inputCells);
-            _tasks = new List<Task>();
+            _tasks = new ConcurrentBag<Task>();
         }
 
         public override void Run()
@@ -39,7 +39,7 @@ namespace GameOfLife
                 if (!NotifyOnceEachResultSetComplete)
                 {
                     string ts = string.Format("{0:00} ms", stopwatch.ElapsedMilliseconds);
-                    string msg = string.Format("Created: {0} in {1}", (i + 1), ts);
+                    string msg = string.Format("Created: {0} in {1} {2}", (i + 1), ts, DateTime.Now.ToLongTimeString());
                     SendMessage(msg);
                 }
             }
@@ -65,20 +65,20 @@ namespace GameOfLife
         private void SpawnRound(int roundToCreate)
         {
             int previousRound = roundToCreate - 1;
-            var spawnedCells = new ConcurrentBag<Cell>();
+            var spawnedCells = new List<Cell>();
 
-            foreach (var cell in Cells[previousRound])
+            Parallel.ForEach(Cells[previousRound], cell =>
             {
                 var local = cell;
                 var task = Task.Run(() =>
-                    {
-                        var result = BirthCell(previousRound, local);
-                        _tasks.Add(result);
-                        spawnedCells.Add(result.Result);
-                    });
+                {
+                    var result = BirthCell(previousRound, local);
+                    // _tasks.Add(result);
+                    spawnedCells.Add(result);
+                });
 
                 _tasks.Add(task);
-            }
+            });
 
             Task.WaitAll(_tasks.ToArray());
             //Debug.Assert(Cells[previousRound].Count == spawnedCells.Count);
@@ -94,14 +94,16 @@ namespace GameOfLife
                 SendResult(spawnedCells.ToList());
         }
 
-        private async Task<Cell> BirthCell(int previousRound, Cell local)
+        private Cell BirthCell(int previousRound, Cell local)
         {
-            var neighbours = await GetNeighbours(previousRound, local);
+            var neighbours = GetNeighbours(previousRound, local);
             int alive = neighbours.Count(a => a.Health == Health.Alive);
             //  Console.WriteLine("Alive Count:{0}", alive);
 
             if (local.Health == Health.Alive)
             {
+                //SendMessage(string.Format("Alive X:{0} Y:{1}", local.X, local.Y));
+
                 if (alive < 2)
                 {
                     //Any live cell with fewer than two live neighbours dies, as if caused by under-population.
@@ -120,6 +122,7 @@ namespace GameOfLife
             }
             else
             {
+               // SendMessage(string.Format("Dead X:{0} Y:{1}", local.X, local.Y));
                 if (alive == 3)
                 {
                     return new Cell(local.X, local.Y, Health.Alive);
@@ -132,32 +135,32 @@ namespace GameOfLife
             throw new ApplicationException("Nothing configured for this cell type?");
         }
 
-        private async Task<List<Cell>> GetNeighbours(int round, Cell cell)
+        private IEnumerable<Cell> GetNeighbours(int round, Cell cell)
         {
-            var topLeft = Cells[round].TopLeftAsync(cell);
-            var top = Cells[round].TopAsync(cell);
-            var topRight = Cells[round].TopRightAsync(cell);
-            var left = Cells[round].LeftAsync(cell);
-            var right = Cells[round].RightAsync(cell);
-            var bottomLeft= Cells[round].BottomLeftAsync(cell);
-            var bottom = Cells[round].BottomAsync(cell);
-            var bottomRight = Cells[round].BottomRightAsync(cell);
+            var topLeft = Cells[round].TopLeft(cell);
+            var top = Cells[round].Top(cell);
+            var topRight = Cells[round].TopRight(cell);
+            var left = Cells[round].Left(cell);
+            var right = Cells[round].Right(cell);
+            var bottomLeft= Cells[round].BottomLeft(cell);
+            var bottom = Cells[round].Bottom(cell);
+            var bottomRight = Cells[round].BottomRight(cell);
 
-            var tasks = new List<Task>(){topLeft, top, topRight, left, right,bottomLeft, bottom, bottomRight};
+            //var tasks = new List<Task>(){topLeft, top, topRight, left, right,bottomLeft, bottom, bottomRight};
 
             var list = new List<Cell>()
                 {
-                    await topLeft,
-                    await top,
-                    await topRight,
-                    await left,
-                    await right,
-                    await bottomLeft,
-                    await bottom,
-                    await bottomRight,
+                     topLeft,
+                     top,
+                     topRight,
+                     left,
+                     right,
+                     bottomLeft,
+                     bottom,
+                     bottomRight,
                 };
 
-            Task.WaitAll(tasks.ToArray()); //http://stackoverflow.com/questions/13432017/await-task-whenall-inside-task-not-awaiting
+          //  Task.WaitAll(tasks.ToArray()); //http://stackoverflow.com/questions/13432017/await-task-whenall-inside-task-not-awaiting
             return list;
         }
     }
