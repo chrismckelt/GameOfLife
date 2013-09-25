@@ -18,7 +18,7 @@ namespace GameOfLife
     class Program
    {
        private const int ROUNDS = 3;
-       private const string LOG_DIRECTORY = @"D:\Development\GameOfLife\Log\";
+       private const string LOG_DIRECTORY = @"c:\Dev\GameOfLife\Log\";
       
        #region sample data 
 
@@ -195,8 +195,8 @@ namespace GameOfLife
 
            var items = inputCells as Cell[] ?? inputCells.ToArray();
            var objectCount = items.Count()*GetCellSize();
-         // if (objectCount >= (65536))  // find out L1 cache size (sysinternals or http://chocolatey.org/packages/cpu-z)
-         if (false)
+          if (objectCount >= (65536))  // find out L1 cache size (sysinternals or http://chocolatey.org/packages/cpu-z)
+        // if (true)
            {
                _simulator = new LargeSimulator(ROUNDS, items);
                WriteLog("LargeSimulator");

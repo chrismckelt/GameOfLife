@@ -62,7 +62,7 @@ namespace GameOfLife
         ///     Any live cell with more than three live neighbours dies, as if by overcrowding.
         ///     Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
         /// </summary>
-        private async void SpawnRound(int roundToCreate)
+        private void SpawnRound(int roundToCreate)
         {
             int previousRound = roundToCreate - 1;
             var spawnedCells = new ConcurrentBag<Cell>();
@@ -72,14 +72,15 @@ namespace GameOfLife
                 var local = cell;
                 var task = Task.Run(() =>
                     {
-                        var bb = BirthCell(previousRound, local);
-                        spawnedCells.Add(bb);
+                        var result = BirthCell(previousRound, local);
+                        _tasks.Add(result);
+                        spawnedCells.Add(result.Result);
                     });
+
                 _tasks.Add(task);
             }
 
-
-            Task.WhenAll(_tasks);
+            Task.WaitAll(_tasks.ToArray());
             //Debug.Assert(Cells[previousRound].Count == spawnedCells.Count);
             Cells.Add(roundToCreate, spawnedCells);
 
@@ -93,11 +94,9 @@ namespace GameOfLife
                 SendResult(spawnedCells.ToList());
         }
 
-        private Cell BirthCell(int previousRound, Cell local)
+        private async Task<Cell> BirthCell(int previousRound, Cell local)
         {
-            var task = Task.Run(() => GetNeighbours(previousRound, local));
-            var neighbours = task.Result;
-            task.Wait();
+            var neighbours = await GetNeighbours(previousRound, local);
             int alive = neighbours.Count(a => a.Health == Health.Alive);
             //  Console.WriteLine("Alive Count:{0}", alive);
 
@@ -135,32 +134,30 @@ namespace GameOfLife
 
         private async Task<List<Cell>> GetNeighbours(int round, Cell cell)
         {
-            var t1 = Cells[round].TopLeftAsync(cell);
-            var t2 = Cells[round].TopLeftAsync(cell);
-            var t3 = Cells[round].TopAsync(cell);
-            var t4 = Cells[round].TopRightAsync(cell);
-            var t5 = Cells[round].LeftAsync(cell);
-            var t6 = Cells[round].RightAsync(cell);
-            var t7 = Cells[round].BottomLeftAsync(cell);
-            var t8 = Cells[round].BottomAsync(cell);
-            var t9 = Cells[round].BottomRightAsync(cell);
+            var topLeft = Cells[round].TopLeftAsync(cell);
+            var top = Cells[round].TopAsync(cell);
+            var topRight = Cells[round].TopRightAsync(cell);
+            var left = Cells[round].LeftAsync(cell);
+            var right = Cells[round].RightAsync(cell);
+            var bottomLeft= Cells[round].BottomLeftAsync(cell);
+            var bottom = Cells[round].BottomAsync(cell);
+            var bottomRight = Cells[round].BottomRightAsync(cell);
 
-            var tasks = new List<Task>(){t1, t2, t3, t4, t5, t6, t7, t8, t9};
+            var tasks = new List<Task>(){topLeft, top, topRight, left, right,bottomLeft, bottom, bottomRight};
 
             var list = new List<Cell>()
                 {
-                    await t1,
-                    await t2,
-                    await t3,
-                    await t4,
-                    await t5,
-                    await t6,
-                    await t7,
-                    await t8,
-                    await t9
+                    await topLeft,
+                    await top,
+                    await topRight,
+                    await left,
+                    await right,
+                    await bottomLeft,
+                    await bottom,
+                    await bottomRight,
                 };
 
-            Task.WaitAll(tasks.ToArray());
+            Task.WaitAll(tasks.ToArray()); //http://stackoverflow.com/questions/13432017/await-task-whenall-inside-task-not-awaiting
             return list;
         }
     }
