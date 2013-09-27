@@ -66,7 +66,7 @@ namespace GameOfLife
 
            var items = inputCells as Cell[] ?? inputCells.ToArray();
            _sampleSize = items.Count();
-           if (_sampleSize >= (1))  // optimise for L1 cache size (sysinternals or http://chocolatey.org/packages/cpu-z)
+           if (_sampleSize >= (1024))  // optimise for L1 cache size (sysinternals or http://chocolatey.org/packages/cpu-z)
        //  if (false)
            {
                _simulator = new LargeSimulator(ROUNDS, items);
@@ -131,7 +131,10 @@ namespace GameOfLife
            }
        }
 
-
+        /// <summary>
+       /// TODO allow good seed algorithms to be entered e.g. Gosper - http://en.wikipedia.org/wiki/Gosper%27s_algorithm
+        /// </summary>
+        /// <returns></returns>
        private static string GetInputSample()
        {
            var input = Console.ReadLine();
@@ -152,7 +155,8 @@ namespace GameOfLife
                    return sample;
                case "r":
                    _runRandomSample = true;
-                   sample =  GenerateRandomString(80,80);
+                   Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight);
+                   sample = GenerateRandomString(Console.LargestWindowHeight-5, Console.LargestWindowWidth-5);
                    WriteLog("Random Sample: " + sample);
                    return sample;
                default:

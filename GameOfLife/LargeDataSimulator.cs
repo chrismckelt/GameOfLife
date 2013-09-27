@@ -66,20 +66,20 @@ namespace GameOfLife
         {
             int previousRound = roundToCreate - 1;
             var spawnedCells = new ConcurrentBag<Cell>();
-
-            Parallel.ForEach(Cells[previousRound], cell =>
-            {
-                var local = cell;
-                var task = Task.Run(() =>
+            var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount * 10 };
+            ///http://stackoverflow.com/questions/5009181/parallel-foreach-vs-task-factory-startnew
+            var task = Task.Run(() =>
                 {
-                    var result = BirthCell(previousRound, local);
-                    // _tasks.Add(result);
-                    spawnedCells.Add(result);
-                });
-
-                _tasks.Add(task);
-            });
-
+                    Parallel.ForEach(Cells[previousRound], options, cell =>
+                    {
+                        var local = cell;
+                        var result = BirthCell(previousRound, local);
+                        spawnedCells.Add(result);
+                    });
+                    }
+                );
+           
+            _tasks.Add(task);
             Task.WaitAll(_tasks.ToArray());
             //Debug.Assert(Cells[previousRound].Count == spawnedCells.Count);
             Cells.Add(roundToCreate, spawnedCells);

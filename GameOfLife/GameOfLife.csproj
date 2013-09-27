@@ -46,7 +46,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cell.cs" />
-    <Compile Include="ExtensionsAsync.cs" />
     <Compile Include="Health.cs" />
     <Compile Include="LargeDataSimulator.cs" />
     <Compile Include="Extensions.cs" />
