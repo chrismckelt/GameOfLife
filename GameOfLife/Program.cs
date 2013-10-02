@@ -17,7 +17,7 @@ namespace GameOfLife
    /// </summary>
     class Program
    {
-       private const int ROUNDS = 3;
+       private const int ROUNDS = 100;
       
        #region sample data 
 
@@ -40,11 +40,22 @@ namespace GameOfLife
 1100100101110000100000101
 1101111110110001001011010
 ";
+       //http://www.conwaylife.com/wiki/index.php?title=Gosper_glider_gun
+       //https://www.codehosting.net/blog/files/gameoflife.txt
+       private const string GLIDER_GUN = @"000000000000000000000000100000000000
+000000000000000000000010100000000000
+000000000000110000001100000000000011
+000000000001000100001100000000000011
+110000000010000010001100000000000000
+110000000010001011000010100000000000
+000000000010000010000000100000000000
+000000000001000100000000000000000000
+000000000000110000000000000000000000";
 
        #endregion
      
        private const string TITLE = "Conway's Game of Life";
-       private static bool _runRandomSample = false;
+       private static bool _runContinousSimulationAtEnd = false;
        private static bool _verifySample1 = false;
        private static SimulatorBase _simulator;
        private static StringBuilder _log;
@@ -60,14 +71,11 @@ namespace GameOfLife
            ShowHelp();
            string sample = GetInputSample();
 
-           //WriteLog(sample);
-
            var inputCells = ParseInput(sample);
 
            var items = inputCells as Cell[] ?? inputCells.ToArray();
            _sampleSize = items.Count();
            if (_sampleSize >= (1024))  // optimise for L1 cache size (sysinternals or http://chocolatey.org/packages/cpu-z)
-       //  if (false)
            {
                _simulator = new LargeSimulator(ROUNDS, items);
                WriteLog("LargeSimulator");
@@ -80,9 +88,8 @@ namespace GameOfLife
           
            _simulator.OnNotifyMessage += WriteLog;
            _simulator.OnNotifyResult += PrintResult;
-           _simulator.NotifyOnceEachResultSetComplete = !_runRandomSample;
+           _simulator.NotifyOnceEachResultSetComplete = !_runContinousSimulationAtEnd;
            Console.WriteLine("Generating results...");
-           //Console.WriteLine(sample);
            _simulator.Run();
 
            Console.ForegroundColor = ConsoleColor.DarkGreen;
@@ -92,7 +99,7 @@ namespace GameOfLife
            WriteLogFile();
           
 
-           if (_runRandomSample)
+           if (_runContinousSimulationAtEnd)
            {
                Console.ForegroundColor = ConsoleColor.White;
                Console.WriteLine("Press any key to stop");
@@ -153,8 +160,15 @@ namespace GameOfLife
                    WriteLog(SAMPLE_INPUT2);
                    sample = SAMPLE_INPUT2;
                    return sample;
+               case "g":
+                   _runContinousSimulationAtEnd = true;
+                   WriteLog("Glider gun: ", true);
+                   WriteLog("");
+                   WriteLog(GLIDER_GUN);
+                   sample = GLIDER_GUN;
+                   return sample;
                case "r":
-                   _runRandomSample = true;
+                   _runContinousSimulationAtEnd = true;
                    Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight);
                    sample = GenerateRandomString(Console.LargestWindowHeight-5, Console.LargestWindowWidth-5);
                    WriteLog("Random Sample: " + sample);
@@ -180,7 +194,7 @@ namespace GameOfLife
 
        private static void PrintResult(IEnumerable<Cell> result)
        {
-           if (_runRandomSample)
+           if (_runContinousSimulationAtEnd)
                Console.Clear();
 
            var sb = new StringBuilder();
@@ -296,6 +310,7 @@ namespace GameOfLife
            Console.WriteLine("Enter:");
            Console.WriteLine("-- '1' for test sample 1");
            Console.WriteLine("-- '2' for test sample 2");
+           Console.WriteLine("-- 'g' for glider gun");
            Console.WriteLine("-- 'r' for a random sample");
            Console.WriteLine("-- or paste a file path for text file input");
            Console.ForegroundColor = ConsoleColor.White;
