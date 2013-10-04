@@ -38,12 +38,24 @@ namespace GameOfLife.Simulators
 
         protected Stopwatch _totalTime;
 
-        public string TimeTaken
+        protected IList<Stopwatch> _calculationTimers = new List<Stopwatch>();
+
+        public long TimeTake {
+            get { return _totalTime.ElapsedMilliseconds; }
+        }
+
+        public long TimeTakeForCalculations
+        {
+            get { return _calculationTimers.Sum(a => a.ElapsedMilliseconds); }
+        }
+    
+
+        public string TimeTakenMessage
         {
             get
             {
                 {
-                    return String.Format("{0:00} ms", _totalTime.ElapsedMilliseconds);
+                    return String.Format("{0:00} ms total {1:00} ms calculations  ", _totalTime.ElapsedMilliseconds, TimeTakeForCalculations);
                 }
             }
         }
@@ -75,7 +87,7 @@ namespace GameOfLife.Simulators
                 stopwatch.Start();
                 SpawnRound(i + 1);
                 stopwatch.Stop();
-
+                _calculationTimers.Add(stopwatch);
                 if (!NotifyOnceEachResultSetComplete)
                 {
                     string ts = string.Format("{0:00} ms", stopwatch.ElapsedMilliseconds);

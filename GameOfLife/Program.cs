@@ -21,7 +21,7 @@ namespace GameOfLife
     class Program
    {
        private const string TITLE = "Conway's Game of Life";
-       private const int ROUNDS = 3;
+       private const int ROUNDS = 10;
        private static bool _runContinousSimulationAtEnd = false;
        private static bool _verifySample1 = false;
        private static SimulatorBase _simulator;
@@ -29,10 +29,18 @@ namespace GameOfLife
        private static string _logFile;
        private static decimal _sampleSize;
        private static string _logDir;
+       private static List<Result> _results;
 
 
        static void Main(string[] args)
        {
+           string simulator = string.Empty;
+           if (args != null && args.Any())
+           {
+               simulator = args[0];
+               Console.WriteLine("Using: {0}",   args[0]);
+           }
+
            Setup();
            ShowHeader();
            ShowHelp();
@@ -42,35 +50,58 @@ namespace GameOfLife
 
            var items = inputCells as Cell[] ?? inputCells.ToArray();
            _sampleSize = items.Count();
-           if (_sampleSize < (10))  // optimise for L1 cache size (sysinternals or http://chocolatey.org/packages/cpu-z)
+           _results = new List<Result>();
+           if (!string.IsNullOrEmpty(simulator) && simulator == "all")
            {
-               _simulator = new IndexedSimulator(ROUNDS, items);
-               WriteLog("IndexedSimulator");
+               BenchmarkSimulator(typeof (IndexedSimulator).Name, items);
+               VerifySample1();
+               _results.Add(new Result(typeof(IndexedSimulator).Name, ROUNDS, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
+               BenchmarkSimulator(typeof (ListSimulator).Name, items);
+               VerifySample1();
+               _results.Add(new Result(typeof(ListSimulator).Name, ROUNDS, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
+               BenchmarkSimulator(typeof (HashSetSimulator).Name, items);
+               VerifySample1();
+               _results.Add(new Result(typeof(HashSetSimulator).Name, ROUNDS, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
+               BenchmarkSimulator(typeof(LargeSimulator).Name, items);
+               VerifySample1();
+               _results.Add(new Result(typeof(LargeSimulator).Name, ROUNDS, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
+
+               Console.ForegroundColor = ConsoleColor.DarkMagenta;
+               WriteLog("Winner = " + _results.OrderBy(a => a.CalculationTime).First().SimulatorName);
+               Console.ForegroundColor = ConsoleColor.Gray;
+               foreach (var result in _results.OrderBy(a=>a.CalculationTime))
+               {
+                   WriteLog(result.ToString());
+               }
+
+               
            }
-           else if (_sampleSize < 4096)
+           else if (!string.IsNullOrWhiteSpace(simulator))
            {
-               _simulator = new Simulator(ROUNDS, items);
-               _simulator.NotifyOnceEachResultSetComplete = true;
-               WriteLog("Simulator");
+               BenchmarkSimulator(simulator, items);
+               WriteLog(string.Format("Time taken: {0}", _simulator.TimeTakenMessage));
            }
            else
            {
-               _simulator = new LargeSimulator(ROUNDS, items);
-               WriteLog("LargeSimulator");
+               if (_sampleSize < (1024))// optimise for L1 cache size (sysinternals or http://chocolatey.org/packages/cpu-z)
+               {
+                   simulator = typeof (IndexedSimulator).Name;
+               }
+               else if (_sampleSize < 4096)
+               {
+                   simulator = typeof (ListSimulator).Name;
+               }
+               else
+               {
+                   simulator = typeof(LargeSimulator).Name;
+               }
+               BenchmarkSimulator(simulator, items);
+               WriteLog(string.Format("Time taken: {0}", _simulator.TimeTakenMessage));
            }
-           _simulator.OnNotifyMessage += WriteLog;
-           _simulator.OnNotifyResult += PrintResult;
-           _simulator.NotifyOnceEachResultSetComplete = !_runContinousSimulationAtEnd;
-           Console.WriteLine("Generating results...");
-           _simulator.Run();
 
-           Console.ForegroundColor = ConsoleColor.DarkGreen;
-           WriteLog(string.Format("Time taken: {0}", _simulator.TimeTaken));
 
-           VerifySample1();
            WriteLogFile();
           
-
            if (_runContinousSimulationAtEnd)
            {
                Console.ForegroundColor = ConsoleColor.White;
@@ -90,7 +121,12 @@ namespace GameOfLife
            }
            else
            {
+               Console.WriteLine("");
+               Console.ForegroundColor = ConsoleColor.Blue;
                Console.WriteLine("Would you like to view the log file? Press key: Y");
+               Console.ForegroundColor = ConsoleColor.White;
+               Console.WriteLine("");
+               Console.WriteLine("");
                var key = Console.ReadKey();
                if (key.Key == ConsoleKey.Y)
                {
@@ -100,6 +136,36 @@ namespace GameOfLife
                }
                Pause();
            }
+       }
+
+       private static void BenchmarkSimulator(string simulator, Cell[] items)
+       {
+           if (simulator == typeof(IndexedSimulator).Name)
+           {
+               _simulator = new IndexedSimulator(ROUNDS, items);
+           }
+           else if (simulator == typeof(ListSimulator).Name)
+           {
+               _simulator = new ListSimulator(ROUNDS, items);
+           }
+           else if (simulator == typeof(HashSetSimulator).Name)
+           {
+               _simulator = new HashSetSimulator(ROUNDS, items);
+           }
+           else
+           {
+               _simulator = new LargeSimulator(ROUNDS, items);
+           }
+           
+           _simulator.OnNotifyMessage += WriteLog;
+           _simulator.OnNotifyResult += PrintResult;
+           _simulator.NotifyOnceEachResultSetComplete = !_runContinousSimulationAtEnd;
+           WriteLog(simulator);
+           Console.ForegroundColor = ConsoleColor.Cyan;
+           Console.WriteLine("Generating results...");
+           Console.ForegroundColor = ConsoleColor.Gray;
+           _simulator.Run();
+           
        }
 
        private static decimal GetCellSize()
@@ -116,6 +182,7 @@ namespace GameOfLife
            var input = Console.ReadLine();
            if (string.IsNullOrWhiteSpace(input)) ShowHelp();
            ISeedLife seed;
+           Console.ForegroundColor = ConsoleColor.Cyan;
            switch (input.ToLowerInvariant())
            {
                case "1":
@@ -134,24 +201,27 @@ namespace GameOfLife
                case "g":
                    _runContinousSimulationAtEnd = true;
                    seed = new GliderGunSeed();
-                   WriteLog("Glider Gun ", true);
+                   WriteLog("Glider Gun");
                    WriteLog("");
                    WriteLog(seed.GetSeed());
                    return seed;
                case "r":
                    _runContinousSimulationAtEnd = true;
-                   Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight);
+                   Console.SetWindowSize(Console.LargestWindowWidth-5, Console.LargestWindowHeight-5);
                    seed = new RandomSeed(Console.LargestWindowHeight - 5, Console.LargestWindowWidth - 5);
-                   WriteLog("Random Sample: " + seed.GetSeed());
+                   WriteLog("Random Sample");
+                   WriteLog(seed.GetSeed());
+                   return seed;
+               case "p":
+                   _runContinousSimulationAtEnd = true;
+                   Console.SetWindowSize(Console.LargestWindowWidth - 5, Console.LargestWindowHeight - 5);
+                   seed = new PrimeSeed(Console.LargestWindowHeight - 5, Console.LargestWindowWidth - 5);
+                   WriteLog("Prime Sample");
+                   WriteLog(seed.GetSeed());
                    return seed;
                default:
                    try
                    {
-                      
-                       if (!File.Exists(input))
-                       {
-                           ShowHelp();
-                       }
                        var fileSeeder = new FileSeeder(input);
                        return fileSeeder;
                    }
@@ -161,6 +231,8 @@ namespace GameOfLife
                    }
                    break;
            }
+
+           Console.ForegroundColor = ConsoleColor.White;
            throw new InvalidDataException("No sample");
        }
 
@@ -277,7 +349,7 @@ namespace GameOfLife
 
        private static void ShowHelp()
        {
-           Console.ForegroundColor = ConsoleColor.DarkGray;
+           Console.ForegroundColor = ConsoleColor.Gray;
            Console.WriteLine("Enter:");
            Console.WriteLine("-- '1' for test sample 1");
            Console.WriteLine("-- '2' for test sample 2");
@@ -302,7 +374,7 @@ namespace GameOfLife
 
        private static void Pause()
        {
-           Console.ForegroundColor = ConsoleColor.DarkMagenta;
+           Console.ForegroundColor = ConsoleColor.White;
            Console.WriteLine("");
            Console.WriteLine("\nPress any key to exit.");
            Console.ReadLine();
@@ -332,6 +404,31 @@ namespace GameOfLife
              
                _logFile = Path.Combine(_logDir, fileName);
               File.WriteAllText(_logFile, _log.ToString());
+           }
+           catch (Exception ex)
+           {
+               ShowError("Log file creation failed", ex);
+           }
+
+           try
+           {
+               if (_results != null && _results.Any())
+               {
+                   string fileName = string.Format("{0}{1}{2}{3}{4}{5}{6}{7}{8}.log", "GameOfLife_", DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, "_", DateTime.Now.ToString("hh_mm"), "_sample_size_", _sampleSize, "_stats");
+
+                   string resultsFile = Path.Combine(_logDir, fileName);
+                   using (var fs = new FileStream(resultsFile, FileMode.OpenOrCreate))
+                   using (var fw = new StreamWriter(fs))
+                   {
+                       foreach (var result in _results)
+                       {
+                           fw.WriteLine(result.ToString());
+                       }
+                       fw.Close();
+                       fs.Close();
+                   }
+                 
+               }
            }
            catch (Exception ex)
            {
@@ -387,7 +484,51 @@ namespace GameOfLife
                        }
                    }
                }
+               Console.ForegroundColor = ConsoleColor.DarkYellow;
                Console.WriteLine("Sample 1 test passed");
+               Console.ForegroundColor = ConsoleColor.White;
+           }
+       }
+
+       internal struct Result
+       {
+           private readonly string _simulatorName;
+           private readonly int _rounds;
+           private readonly long _totalTime;
+           private readonly long _calculationTime;
+
+           public Result(string simulatorName, int rounds, long totalTime, long calculationTime)
+           {
+               _simulatorName = simulatorName;
+               _rounds = rounds;
+               _totalTime = totalTime;
+               _calculationTime = calculationTime;
+           }
+
+           public long TotalTime
+           {
+               get { return _totalTime; }
+           }
+
+           public string SimulatorName
+           {
+               get { return _simulatorName; }
+           }
+
+           public int Rounds
+           {
+               get { return _rounds; }
+           }
+
+           public long CalculationTime
+           {
+               get { return _calculationTime; }
+           }
+
+           public override string ToString()
+           {
+               return string.Format("Simulator: {0,10} \t  Rounds: {1,3} Total time: {2,10} Calculation time: {3,10}", SimulatorName,
+                                    Rounds, TotalTime, CalculationTime);
            }
        }
 

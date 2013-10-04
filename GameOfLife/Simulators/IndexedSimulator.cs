@@ -49,9 +49,10 @@ namespace GameOfLife.Simulators
                 var stopwatch = new Stopwatch();
                 stopwatch.Start();
                 SpawnRound(i + 1);
-                CollectCells(i+1);
-                _previousGeneration = _nextGeneration;
                 stopwatch.Stop();
+                _calculationTimers.Add(stopwatch);
+                CollectCells(i + 1);
+                _previousGeneration = _nextGeneration;
 
                 if (!NotifyOnceEachResultSetComplete)
                 {

@@ -6,9 +6,9 @@ using GameOfLife.Extensions;
 
 namespace GameOfLife.Simulators
 {
-    public class Simulator : SimulatorBase
+    public partial class ListSimulator : SimulatorBase
     {
-        public Simulator(int generations, IEnumerable<Cell> inputCells) : base(generations, inputCells)
+        public ListSimulator(int generations, IEnumerable<Cell> inputCells) : base(generations, inputCells)
         {
             Cells = new Dictionary<int, IEnumerable<Cell>>(); 
             Cells.Add(0, inputCells);
