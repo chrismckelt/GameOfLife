@@ -30,6 +30,7 @@ namespace GameOfLife
        private static decimal _sampleSize;
        private static string _logDir;
        private static List<Result> _results;
+       private static bool _deleteLogFileOnStart;
 
 
        static void Main(string[] args)
@@ -350,9 +351,12 @@ namespace GameOfLife
            }
            else
            {
-               foreach (var ff in Directory.GetFiles(_logDir))
+               if (_deleteLogFileOnStart)
                {
-                   File.Delete(ff);
+                   foreach (var ff in Directory.GetFiles(_logDir))
+                   {
+                       File.Delete(ff);
+                   }
                }
            }
        }
