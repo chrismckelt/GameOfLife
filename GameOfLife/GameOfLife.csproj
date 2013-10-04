@@ -45,18 +45,26 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Cell.cs" />
-    <Compile Include="Health.cs" />
-    <Compile Include="LargeDataSimulator.cs" />
-    <Compile Include="Extensions.cs" />
+    <Compile Include="Domain\Cell.cs" />
+    <Compile Include="Domain\Health.cs" />
+    <Compile Include="Simulators\IndexedSimulator.cs" />
+    <Compile Include="Simulators\LargeDataSimulator.cs" />
+    <Compile Include="Extensions\NeighbourExtensions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Simulator.cs" />
-    <Compile Include="SimulatorBase.cs" />
+    <Compile Include="Seeders\FileSeeder.cs" />
+    <Compile Include="Seeders\GliderGunSeed.cs" />
+    <Compile Include="Seeders\ISeedLife.cs" />
+    <Compile Include="Seeders\RandomSeed.cs" />
+    <Compile Include="Seeders\Sample1Seed.cs" />
+    <Compile Include="Seeders\Sample2Seed.cs" />
+    <Compile Include="Simulators\Simulator.cs" />
+    <Compile Include="Simulators\SimulatorBase.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

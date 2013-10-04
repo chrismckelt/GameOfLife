@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using GameOfLife.Domain;
 
-namespace GameOfLife
+namespace GameOfLife.Extensions
 {
     /// <summary>
     /// FirstOrDefault is almost twice as fast as SingleOrDefault
     /// </summary>
-    public static class Extensions
+    public static class NeighbourExtensions
     {
         public static Cell TopLeft(this IEnumerable<Cell> cells, Cell from)
         {
@@ -43,12 +41,12 @@ namespace GameOfLife
 
         public static Cell Bottom(this IEnumerable<Cell> cells, Cell from)
         {
-            return cells.FirstOrDefault(a => a.X == from.X && a.Y == from.Y - 1);
+            return cells.FirstOrDefault(a => a.X == from.X && a.Y == from.Y + 1);
         }
 
         public static Cell Top(this IEnumerable<Cell> cells, Cell from)
         {
-            return cells.FirstOrDefault(a => a.X == from.X && a.Y == from.Y + 1);
+            return cells.FirstOrDefault(a => a.X == from.X && a.Y == from.Y - 1);
         }
     }
 }

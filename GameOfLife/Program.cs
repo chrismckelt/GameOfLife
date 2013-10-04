@@ -9,6 +9,9 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using GameOfLife.Domain;
+using GameOfLife.Seeders;
+using GameOfLife.Simulators;
 
 namespace GameOfLife
 {
@@ -17,44 +20,8 @@ namespace GameOfLife
    /// </summary>
     class Program
    {
-       private const int ROUNDS = 100;
-      
-       #region sample data 
-
-       private const string SAMPLE_INPUT = @"
-10100
-00100
-10100
-";
-
-       private const string SAMPLE_INPUT2 = @"
-0010110111000011010110101
-1011111001111110010110110
-1100010001111110010010011
-1101011110011000010000011
-0011010101011100101110111
-0100010110010001110010110
-1101011111000101001100100
-1101011001111101011000100
-0000001010100110110010000
-1100100101110000100000101
-1101111110110001001011010
-";
-       //http://www.conwaylife.com/wiki/index.php?title=Gosper_glider_gun
-       //https://www.codehosting.net/blog/files/gameoflife.txt
-       private const string GLIDER_GUN = @"000000000000000000000000100000000000
-000000000000000000000010100000000000
-000000000000110000001100000000000011
-000000000001000100001100000000000011
-110000000010000010001100000000000000
-110000000010001011000010100000000000
-000000000010000010000000100000000000
-000000000001000100000000000000000000
-000000000000110000000000000000000000";
-
-       #endregion
-     
        private const string TITLE = "Conway's Game of Life";
+       private const int ROUNDS = 3;
        private static bool _runContinousSimulationAtEnd = false;
        private static bool _verifySample1 = false;
        private static SimulatorBase _simulator;
@@ -69,23 +36,28 @@ namespace GameOfLife
            Setup();
            ShowHeader();
            ShowHelp();
-           string sample = GetInputSample();
+           string sample = FindInputSeed().GetSeed();
 
            var inputCells = ParseInput(sample);
 
            var items = inputCells as Cell[] ?? inputCells.ToArray();
            _sampleSize = items.Count();
-           if (_sampleSize >= (1024))  // optimise for L1 cache size (sysinternals or http://chocolatey.org/packages/cpu-z)
+           if (_sampleSize < (10))  // optimise for L1 cache size (sysinternals or http://chocolatey.org/packages/cpu-z)
+           {
+               _simulator = new IndexedSimulator(ROUNDS, items);
+               WriteLog("IndexedSimulator");
+           }
+           else if (_sampleSize < 4096)
+           {
+               _simulator = new Simulator(ROUNDS, items);
+               _simulator.NotifyOnceEachResultSetComplete = true;
+               WriteLog("Simulator");
+           }
+           else
            {
                _simulator = new LargeSimulator(ROUNDS, items);
                WriteLog("LargeSimulator");
            }
-           else
-           {
-               _simulator = new Simulator(ROUNDS, items);
-               WriteLog("Simulator");
-           }
-          
            _simulator.OnNotifyMessage += WriteLog;
            _simulator.OnNotifyResult += PrintResult;
            _simulator.NotifyOnceEachResultSetComplete = !_runContinousSimulationAtEnd;
@@ -138,50 +110,50 @@ namespace GameOfLife
            }
        }
 
-        /// <summary>
-       /// TODO allow good seed algorithms to be entered e.g. Gosper - http://en.wikipedia.org/wiki/Gosper%27s_algorithm
-        /// </summary>
-        /// <returns></returns>
-       private static string GetInputSample()
+      
+       private static ISeedLife FindInputSeed()
        {
            var input = Console.ReadLine();
-           string sample = string.Empty;
+           if (string.IsNullOrWhiteSpace(input)) ShowHelp();
+           ISeedLife seed;
            switch (input.ToLowerInvariant())
            {
                case "1":
                    _verifySample1 = true;
+                   seed = new Sample1Seed();
                    WriteLog("Sample 1 ", true);
                    WriteLog("");
-                   WriteLog(SAMPLE_INPUT);
-                   return SAMPLE_INPUT;
+                   WriteLog(seed.GetSeed());
+                   return seed;
                case "2":
-                   WriteLog("Sample 2: ", true);
+                   seed = new Sample2Seed();
+                   WriteLog("Sample 2 ", true);
                    WriteLog("");
-                   WriteLog(SAMPLE_INPUT2);
-                   sample = SAMPLE_INPUT2;
-                   return sample;
+                   WriteLog(seed.GetSeed());
+                   return seed;
                case "g":
                    _runContinousSimulationAtEnd = true;
-                   WriteLog("Glider gun: ", true);
+                   seed = new GliderGunSeed();
+                   WriteLog("Glider Gun ", true);
                    WriteLog("");
-                   WriteLog(GLIDER_GUN);
-                   sample = GLIDER_GUN;
-                   return sample;
+                   WriteLog(seed.GetSeed());
+                   return seed;
                case "r":
                    _runContinousSimulationAtEnd = true;
                    Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight);
-                   sample = GenerateRandomString(Console.LargestWindowHeight-5, Console.LargestWindowWidth-5);
-                   WriteLog("Random Sample: " + sample);
-                   return sample;
+                   seed = new RandomSeed(Console.LargestWindowHeight - 5, Console.LargestWindowWidth - 5);
+                   WriteLog("Random Sample: " + seed.GetSeed());
+                   return seed;
                default:
                    try
                    {
+                      
                        if (!File.Exists(input))
                        {
                            ShowHelp();
                        }
-
-                       return File.ReadAllText(input);
+                       var fileSeeder = new FileSeeder(input);
+                       return fileSeeder;
                    }
                    catch (Exception ex)
                    {
@@ -243,7 +215,7 @@ namespace GameOfLife
                            }
 
                            int charCount = 1;
-                           foreach (var chr in line.ToCharArray())
+                           foreach (var chr in line.ToCharArray().AsParallel())
                            {
                                cells.Add(new Cell(charCount, lineCount, IsAlive(chr)));
                                charCount++;
@@ -260,7 +232,6 @@ namespace GameOfLife
                Console.ForegroundColor = ConsoleColor.DarkRed;
                ShowError("Failed to parse input", ex);
            }
-
            return cells;
        }
 
@@ -337,23 +308,7 @@ namespace GameOfLife
            Console.ReadLine();
        }
 
-       private static string GenerateRandomString(int height, int width)
-       {
-           var sb = new StringBuilder();
-           var random = new Random();
-
-           for (int a = 0; a < height; a++)
-           {
-               for (int b = 0; b < width; b++)
-               {
-                   sb.Append(random.Next(1,3) % 2 == 0 ? "1" : "0");
-               }
-               sb.AppendLine();
-           }
-
-           return sb.ToString();
-       }
-
+     
        private static void WriteLog(string msg)
        {
            Console.WriteLine(msg);

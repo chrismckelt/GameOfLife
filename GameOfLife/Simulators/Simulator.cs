@@ -1,10 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading.Tasks;
+using GameOfLife.Domain;
+using GameOfLife.Extensions;
 
-namespace GameOfLife
+namespace GameOfLife.Simulators
 {
     public class Simulator : SimulatorBase
     {
@@ -14,42 +14,6 @@ namespace GameOfLife
             Cells.Add(0, inputCells);
         }
 
-        public override void Run()
-        {
-            _totalTime = new Stopwatch();
-            _totalTime.Start();
-            SendMessage("Total Rounds: " + Rounds);
-
-            for (int i = 0; i < Rounds; i++)
-            {
-                if (AllDead)
-                    break;
-
-                var stopwatch = new Stopwatch();
-                stopwatch.Start();
-                SpawnRound(i + 1);
-                stopwatch.Stop();
-
-                if (!NotifyOnceEachResultSetComplete)
-                {
-                    string ts = string.Format("{0:00} ms", stopwatch.ElapsedMilliseconds);
-                    string msg = string.Format("Created: {0} in {1}", (i + 1), ts);
-                    SendMessage(msg);
-                }
-            }
-            _totalTime.Stop();
-            Completed = true;
-
-            if (!NotifyOnceEachResultSetComplete)
-            {
-                foreach (var item in Cells.Values)
-                {
-                    if (!NotifyOnceEachResultSetComplete)
-                        SendResult(item);
-                }
-            }
-        }
-
 
         /// <summary>
         ///     Any live cell with fewer than two live neighbours dies, as if caused by under-population.
@@ -57,7 +21,7 @@ namespace GameOfLife
         ///     Any live cell with more than three live neighbours dies, as if by overcrowding.
         ///     Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
         /// </summary>
-        private void SpawnRound(int roundToCreate)
+        protected override void SpawnRound(int roundToCreate)
         {
             int previousRound = roundToCreate - 1;
             var spawnedCells = new List<Cell>();
@@ -108,7 +72,7 @@ namespace GameOfLife
                 SendResult(spawnedCells);
         }
 
-        private IEnumerable<Cell> GetNeighbours(int round, Cell cell)
+        protected IEnumerable<Cell> GetNeighbours(int round, Cell cell)
         {
             var list = new List<Cell>
                 {
