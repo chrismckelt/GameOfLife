@@ -31,7 +31,7 @@ namespace GameOfLife
        private static string _logDir;
        private static List<Result> _results;
        private const bool _deleteLogFileOnStart = true;
-       private static readonly string _logFileName = string.Format("{0}{1}{2}{3}{4}{5}", "GameOfLife_", DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, "_", DateTime.Now.ToString("hh_mm"));
+       private static string _logFileName = string.Format("{0}{1}{2}{3}{4}{5}", "GameOfLife_", DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, "_", DateTime.Now.ToString("hh_mm"));
 
 
        static void Main(string[] args)
@@ -49,9 +49,11 @@ namespace GameOfLife
            string sample = FindInputSeed().GetSeed();
 
            var inputCells = ParseInput(sample);
+           
 
            var items = inputCells as Cell[] ?? inputCells.ToArray();
-           _sampleSize = items.Count();
+           _sampleSize = items.Max(a=>a.X) * items.Max(b=>b.Y);
+           _logFileName += "_size_" + _sampleSize;
            _results = new List<Result>();
 
            const int roundsStart = 1;
@@ -244,6 +246,7 @@ namespace GameOfLife
                    _runContinousSimulationAtEnd = true;
                    Console.SetWindowSize(Console.LargestWindowWidth-5, Console.LargestWindowHeight-5);
                    seed = new RandomSeed(Console.LargestWindowHeight - 5, Console.LargestWindowWidth - 5);
+                   WriteLog(string.Format("Window Sized to : {0} {1}", Console.LargestWindowHeight - 5, Console.LargestWindowWidth - 5));
                    WriteLog("Random Sample");
                    WriteLog(seed.GetSeed());
                    return seed;
@@ -251,6 +254,7 @@ namespace GameOfLife
                    _runContinousSimulationAtEnd = true;
                    Console.SetWindowSize(Console.LargestWindowWidth - 5, Console.LargestWindowHeight - 5);
                    seed = new PrimeSeed(Console.LargestWindowHeight - 5, Console.LargestWindowWidth - 5);
+                   WriteLog(string.Format("Window Sized to : {0} {1}", Console.LargestWindowHeight - 5, Console.LargestWindowWidth - 5));
                    WriteLog("Prime Sample");
                    WriteLog(seed.GetSeed());
                    return seed;
