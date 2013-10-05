@@ -54,11 +54,12 @@ namespace GameOfLife
            _results = new List<Result>();
 
            int roundsStart = 1;
-           int roundsEnd = 1000;
-           int increment = 100;
+           int roundsEnd = 10;
+           int increment = 1;
 
            if (!string.IsNullOrEmpty(simulator) && simulator == "all")
            {
+               // small
                BenchmarkSimulator(typeof (IndexedSimulator).Name, items, roundsStart, roundsEnd, increment);
                VerifySample1();
                _results.Add(new Result(typeof(IndexedSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
@@ -68,9 +69,17 @@ namespace GameOfLife
                BenchmarkSimulator(typeof(HashSetSimulator).Name, items, roundsStart, roundsEnd, increment);
                VerifySample1();
                _results.Add(new Result(typeof(HashSetSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
-               BenchmarkSimulator(typeof(LargeSimulator).Name, items, roundsStart, roundsEnd, increment);
+             
+               // large
+               BenchmarkSimulator(typeof(ConcurrentBagSimulator).Name, items, roundsStart, roundsEnd, increment);
                VerifySample1();
-               _results.Add(new Result(typeof(LargeSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
+               _results.Add(new Result(typeof(ConcurrentBagSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
+               BenchmarkSimulator(typeof(ConcurrentQueueSimulator).Name, items, roundsStart, roundsEnd, increment);
+               VerifySample1();
+               _results.Add(new Result(typeof(ConcurrentQueueSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
+               BenchmarkSimulator(typeof(ConcurrentStackSimulator).Name, items, roundsStart, roundsEnd, increment);
+               VerifySample1();
+               _results.Add(new Result(typeof(ConcurrentStackSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
 
                Console.ForegroundColor = ConsoleColor.DarkMagenta;
                WriteLog("Winner = " + _results.OrderBy(a => a.CalculationTime).First().SimulatorName);
@@ -85,6 +94,7 @@ namespace GameOfLife
            {
                BenchmarkSimulator(simulator, items, ROUNDS, ROUNDS,ROUNDS);
                WriteLog(string.Format("Time taken: {0}", _simulator.TimeTakenMessage));
+               VerifySample1();
            }
            else
            {
@@ -159,9 +169,21 @@ namespace GameOfLife
                {
                    _simulator = new HashSetSimulator(roundsStart, items);
                }
+               else if (simulator == typeof(ConcurrentStackSimulator).Name)
+               {
+                   _simulator = new ConcurrentStackSimulator(roundsStart, items);
+               }
+               else if (simulator == typeof(ConcurrentQueueSimulator).Name)
+               {
+                   _simulator = new ConcurrentQueueSimulator(roundsStart, items);
+               }
+               else if (simulator == typeof(ConcurrentBagSimulator).Name)
+               {
+                   _simulator = new ConcurrentBagSimulator(roundsStart, items);
+               }
                else
                {
-                   _simulator = new LargeSimulator(roundsStart, items);
+                   throw new ArgumentException(simulator + " not found");
                }
 
                _simulator.OnNotifyMessage += WriteLog;

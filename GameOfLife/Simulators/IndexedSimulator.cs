@@ -35,6 +35,7 @@ namespace GameOfLife.Simulators
             Cells.Add(0, inputCells);
         }
 
+
         public override void Run()
         {
             _totalTime = new Stopwatch();

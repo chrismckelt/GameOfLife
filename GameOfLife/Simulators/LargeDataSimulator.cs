@@ -1,26 +1,37 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using GameOfLife.Domain;
 using GameOfLife.Extensions;
 
 namespace GameOfLife.Simulators
 {
-    public class LargeSimulator : SimulatorBase
+    public abstract class LargeSimulator : SimulatorBase
     {
-        private ConcurrentBag<Task> _tasks;
+        protected abstract IProducerConsumerCollection<Cell> GetCellEnumerableDataHolder();
 
-        public LargeSimulator(int generations, IEnumerable<Cell> inputCells)
+        protected abstract IProducerConsumerCollection<Task> GetTaskEnumerableDataHolder();
+
+        private IProducerConsumerCollection<Task> _tasks;
+
+        protected LargeSimulator(int generations, ICollection<Cell> inputCells)
             : base(generations, inputCells)
         {
             Cells = new ConcurrentDictionary<int, IEnumerable<Cell>>(); 
             Cells.Add(0, inputCells);
-            _tasks = new ConcurrentBag<Task>();
         }
 
+        public override void Run()
+        {
+            _tasks = GetTaskEnumerableDataHolder();
+            base.Run();
+        }
         
         /// <summary>
         ///     Any live cell with fewer than two live neighbours dies, as if caused by under-population.
@@ -31,7 +42,7 @@ namespace GameOfLife.Simulators
         protected override void SpawnRound(int roundToCreate)
         {
             int previousRound = roundToCreate - 1;
-            var spawnedCells = new ConcurrentBag<Cell>();
+            var spawnedCells = GetCellEnumerableDataHolder();
             var options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount * 10 };
             ///http://stackoverflow.com/questions/5009181/parallel-foreach-vs-task-factory-startnew
             var task = Task.Run(() =>
@@ -40,12 +51,13 @@ namespace GameOfLife.Simulators
                     {
                         var local = cell;
                         var result = BirthCell(previousRound, local);
-                        spawnedCells.Add(result);
+                        bool added = spawnedCells.TryAdd(result);
+                        if (!added) throw new ThreadStateException("Cell not added");
                     });
                     }
                 );
            
-            _tasks.Add(task);
+            _tasks.TryAdd(task);
             Task.WaitAll(_tasks.ToArray());
             //Debug.Assert(Cells[previousRound].Count == spawnedCells.Count);
             Cells.Add(roundToCreate, spawnedCells);
@@ -113,21 +125,19 @@ namespace GameOfLife.Simulators
             var bottomRight = Cells[round].BottomRight(cell);
 
             //var tasks = new List<Task>(){topLeft, top, topRight, left, right,bottomLeft, bottom, bottomRight};
-
-            var list = new List<Cell>()
-                {
-                     topLeft,
-                     top,
-                     topRight,
-                     left,
-                     right,
-                     bottomLeft,
-                     bottom,
-                     bottomRight,
-                };
+            var list = GetCellEnumerableDataHolder();
+            list.TryAdd(topLeft);
+            list.TryAdd(top);
+            list.TryAdd(topRight);
+            list.TryAdd(left);
+            list.TryAdd(right);
+            list.TryAdd(bottomLeft);
+            list.TryAdd(bottom);
+            list.TryAdd(bottomRight);
 
           //  Task.WaitAll(tasks.ToArray()); //http://stackoverflow.com/questions/13432017/await-task-whenall-inside-task-not-awaiting
             return list;
         }
+
     }
 }
