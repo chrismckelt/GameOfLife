@@ -30,8 +30,8 @@ namespace GameOfLife
        private static decimal _sampleSize;
        private static string _logDir;
        private static List<Result> _results;
-       private static bool _deleteLogFileOnStart = true;
-       private static string _logFileName;
+       private const bool _deleteLogFileOnStart = true;
+       private static readonly string _logFileName = string.Format("{0}{1}{2}{3}{4}{5}", "GameOfLife_", DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, "_", DateTime.Now.ToString("hh_mm"));
 
 
        static void Main(string[] args)
@@ -460,8 +460,6 @@ namespace GameOfLife
        {
            try
            {
-               _logFileName = string.Format("{0}{1}{2}{3}{4}{5}{6}{7}", "GameOfLife_", DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, "_", DateTime.Now.ToString("hh_mm"), "_sample_size_", _sampleSize);
-             
                _logFile = Path.Combine(_logDir, _logFileName + "_debug.log");
                File.AppendAllText(_logFile, _log.ToString() + Environment.NewLine);     
                _log.Clear();
