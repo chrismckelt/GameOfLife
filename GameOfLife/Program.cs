@@ -30,7 +30,7 @@ namespace GameOfLife
        private static decimal _sampleSize;
        private static string _logDir;
        private static List<Result> _results;
-       private static bool _deleteLogFileOnStart;
+       private static bool _deleteLogFileOnStart = true;
 
 
        static void Main(string[] args)
@@ -53,9 +53,9 @@ namespace GameOfLife
            _sampleSize = items.Count();
            _results = new List<Result>();
 
-           int roundsStart = 1;
-           int roundsEnd = 10;
-           int increment = 1;
+           const int roundsStart = 1;
+           const int roundsEnd = 30;
+           const int increment = 1;
 
            if (!string.IsNullOrEmpty(simulator) && simulator == "all")
            {
@@ -88,6 +88,8 @@ namespace GameOfLife
                {
                    WriteLog(result.ToString());
                }
+
+               WriteResults();
 
            }
            else if (!string.IsNullOrWhiteSpace(simulator))
@@ -186,7 +188,7 @@ namespace GameOfLife
                    throw new ArgumentException(simulator + " not found");
                }
 
-               _simulator.OnNotifyMessage += WriteLog;
+               _simulator.OnNotifyMessage += msg => Program.WriteLog(msg, true, true);
                _simulator.OnNotifyResult += PrintResult;
                _simulator.NotifyOnceEachResultSetComplete = !_runContinousSimulationAtEnd;
                WriteLog(simulator);
@@ -439,6 +441,20 @@ namespace GameOfLife
            _log.AppendLine(msg);
        }
 
+       private static void WriteLog(string msg, bool ignoreConsoleOutput, bool flushToFile)
+       {
+           if (!ignoreConsoleOutput)
+               Console.WriteLine(msg);
+
+           _log.AppendLine(msg);
+
+           if (flushToFile)
+           {
+               WriteLogFile();
+               WriteResults();
+           }
+       }
+
        private static void WriteLogFile()
        {
            try
@@ -447,20 +463,26 @@ namespace GameOfLife
              
                _logFile = Path.Combine(_logDir, fileName);
                File.AppendAllText(_logFile, _log.ToString() + Environment.NewLine);     
+               _log.Clear();
            }
            catch (Exception ex)
            {
                ShowError("Log file creation failed", ex);
            }
+       }
 
+       private static void WriteResults()
+       {
            try
            {
                if (_results != null && _results.Any())
                {
-                   string fileName = string.Format("{0}{1}{2}{3}{4}{5}{6}{7}{8}.log", "GameOfLife_", DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, "_", DateTime.Now.ToString("hh_mm"), "_sample_size_", _sampleSize, "_results");
+                   string fileName = string.Format("{0}{1}{2}{3}{4}{5}{6}{7}{8}.log", "GameOfLife_", DateTime.Now.Year,
+                                                   DateTime.Now.Month, DateTime.Now.Day, "_", DateTime.Now.ToString("hh_mm"),
+                                                   "_sample_size_", _sampleSize, "_results");
 
                    string resultsFile = Path.Combine(_logDir, fileName);
-                   using (var fs = new FileStream(resultsFile, FileMode.OpenOrCreate))
+                   using (var fs = new FileStream(resultsFile, FileMode.Create))
                    using (var fw = new StreamWriter(fs))
                    {
                        foreach (var result in _results)
@@ -470,7 +492,6 @@ namespace GameOfLife
                        fw.Close();
                        fs.Close();
                    }
-                 
                }
            }
            catch (Exception ex)
@@ -570,7 +591,7 @@ namespace GameOfLife
 
            public override string ToString()
            {
-               return string.Format("Simulator: {0,10} \t  Rounds: {1,3} Total time: {2,10} Calculation time: {3,10}", SimulatorName,
+               return string.Format("Simulator: {0,20} \t  Rounds: {1,3} Total time: {2,10} Calculation time: {3,10}", SimulatorName,
                                     Rounds, TotalTime, CalculationTime);
            }
        }
