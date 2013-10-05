@@ -56,48 +56,54 @@ namespace GameOfLife
            _logFileName += "_size_" + _sampleSize;
            _results = new List<Result>();
 
-           const int roundsStart = 1;
+           int roundsStart = 1;
            const int roundsEnd = 30;
            const int increment = 1;
 
            if (!string.IsNullOrEmpty(simulator) && simulator == "all")
            {
-               // small
-               BenchmarkSimulator(typeof (IndexedSimulator).Name, items, roundsStart, roundsEnd, increment);
-               VerifySample1();
-               _results.Add(new Result(typeof(IndexedSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
-               BenchmarkSimulator(typeof(ListSimulator).Name, items, roundsStart, roundsEnd, increment);
-               VerifySample1();
-               _results.Add(new Result(typeof(ListSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
-               BenchmarkSimulator(typeof(HashSetSimulator).Name, items, roundsStart, roundsEnd, increment);
-               VerifySample1();
-               _results.Add(new Result(typeof(HashSetSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
-             
-               // large
-               BenchmarkSimulator(typeof(ConcurrentBagSimulator).Name, items, roundsStart, roundsEnd, increment);
-               VerifySample1();
-               _results.Add(new Result(typeof(ConcurrentBagSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
-               BenchmarkSimulator(typeof(ConcurrentQueueSimulator).Name, items, roundsStart, roundsEnd, increment);
-               VerifySample1();
-               _results.Add(new Result(typeof(ConcurrentQueueSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
-               BenchmarkSimulator(typeof(ConcurrentStackSimulator).Name, items, roundsStart, roundsEnd, increment);
-               VerifySample1();
-               _results.Add(new Result(typeof(ConcurrentStackSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
-
-               Console.ForegroundColor = ConsoleColor.DarkMagenta;
-               WriteLog("Winner = " + _results.OrderBy(a => a.CalculationTime).First().SimulatorName);
-               Console.ForegroundColor = ConsoleColor.Gray;
-               foreach (var result in _results.OrderBy(a=>a.CalculationTime))
+               do
                {
-                   WriteLog(result.ToString());
-               }
+                   // small
+                   BenchmarkSimulator(typeof(IndexedSimulator).Name, items, roundsStart);
+                   VerifySample1();
+                   _results.Add(new Result(typeof(IndexedSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
+                   BenchmarkSimulator(typeof(ListSimulator).Name, items, roundsStart);
+                   VerifySample1();
+                   _results.Add(new Result(typeof(ListSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
+                   BenchmarkSimulator(typeof(HashSetSimulator).Name, items, roundsStart);
+                   VerifySample1();
+                   _results.Add(new Result(typeof(HashSetSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
 
-               WriteResults();
+                   // large
+                   BenchmarkSimulator(typeof(ConcurrentBagSimulator).Name, items, roundsStart);
+                   VerifySample1();
+                   _results.Add(new Result(typeof(ConcurrentBagSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
+                   BenchmarkSimulator(typeof(ConcurrentQueueSimulator).Name, items, roundsStart);
+                   VerifySample1();
+                   _results.Add(new Result(typeof(ConcurrentQueueSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
+                   BenchmarkSimulator(typeof(ConcurrentStackSimulator).Name, items, roundsStart);
+                   VerifySample1();
+                   _results.Add(new Result(typeof(ConcurrentStackSimulator).Name, roundsStart, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
+
+                   Console.ForegroundColor = ConsoleColor.DarkMagenta;
+                   WriteLog("Winner = " + _results.OrderBy(a => a.CalculationTime).First().SimulatorName);
+                   Console.ForegroundColor = ConsoleColor.Gray;
+                   foreach (var result in _results.OrderBy(a => a.CalculationTime))
+                   {
+                       WriteLog(result.ToString());
+                   }
+
+                   WriteResults();
+                   roundsStart += increment;
+               } while (roundsStart < roundsEnd);
+              
 
            }
            else if (!string.IsNullOrWhiteSpace(simulator))
            {
-               BenchmarkSimulator(simulator, items, ROUNDS, ROUNDS,ROUNDS);
+               BenchmarkSimulator(simulator, items, ROUNDS);
+
                WriteLog(string.Format("Time taken: {0}", _simulator.TimeTakenMessage));
                VerifySample1();
            }
@@ -115,7 +121,7 @@ namespace GameOfLife
                {
                    simulator = typeof(LargeSimulator).Name;
                }
-               BenchmarkSimulator(simulator, items,ROUNDS, ROUNDS, ROUNDS);
+               BenchmarkSimulator(simulator, items,ROUNDS);
                WriteLog(string.Format("Time taken: {0}", _simulator.TimeTakenMessage));
            }
 
@@ -158,33 +164,31 @@ namespace GameOfLife
            }
        }
 
-       private static void BenchmarkSimulator(string simulator, Cell[] items, int roundsStart, int roundsEnd, int increment)
+       private static void BenchmarkSimulator(string simulator, Cell[] items, int rounds)
        {
-           do
-           {
                if (simulator == typeof (IndexedSimulator).Name)
                {
-                   _simulator = new IndexedSimulator(roundsStart, items);
+                   _simulator = new IndexedSimulator(rounds, items);
                }
                else if (simulator == typeof (ListSimulator).Name)
                {
-                   _simulator = new ListSimulator(roundsStart, items);
+                   _simulator = new ListSimulator(rounds, items);
                }
                else if (simulator == typeof (HashSetSimulator).Name)
                {
-                   _simulator = new HashSetSimulator(roundsStart, items);
+                   _simulator = new HashSetSimulator(rounds, items);
                }
                else if (simulator == typeof(ConcurrentStackSimulator).Name)
                {
-                   _simulator = new ConcurrentStackSimulator(roundsStart, items);
+                   _simulator = new ConcurrentStackSimulator(rounds, items);
                }
                else if (simulator == typeof(ConcurrentQueueSimulator).Name)
                {
-                   _simulator = new ConcurrentQueueSimulator(roundsStart, items);
+                   _simulator = new ConcurrentQueueSimulator(rounds, items);
                }
                else if (simulator == typeof(ConcurrentBagSimulator).Name)
                {
-                   _simulator = new ConcurrentBagSimulator(roundsStart, items);
+                   _simulator = new ConcurrentBagSimulator(rounds, items);
                }
                else
                {
@@ -200,9 +204,7 @@ namespace GameOfLife
                Console.ForegroundColor = ConsoleColor.Gray;
                _simulator.Run();
 
-               roundsStart += increment;
-
-           } while (roundsStart < roundsEnd);
+    
        }
 
        private static decimal GetCellSize()
