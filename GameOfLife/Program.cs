@@ -31,6 +31,7 @@ namespace GameOfLife
        private static string _logDir;
        private static List<Result> _results;
        private static bool _deleteLogFileOnStart = true;
+       private static string _logFileName;
 
 
        static void Main(string[] args)
@@ -459,9 +460,9 @@ namespace GameOfLife
        {
            try
            {
-               string fileName = string.Format("{0}{1}{2}{3}{4}{5}{6}{7}{8}.log", "GameOfLife_", DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, "_", DateTime.Now.ToString("hh_mm"), "_sample_size_", _sampleSize, "_debug");
+               _logFileName = string.Format("{0}{1}{2}{3}{4}{5}{6}{7}", "GameOfLife_", DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, "_", DateTime.Now.ToString("hh_mm"), "_sample_size_", _sampleSize);
              
-               _logFile = Path.Combine(_logDir, fileName);
+               _logFile = Path.Combine(_logDir, _logFileName + "_debug.log");
                File.AppendAllText(_logFile, _log.ToString() + Environment.NewLine);     
                _log.Clear();
            }
@@ -477,11 +478,8 @@ namespace GameOfLife
            {
                if (_results != null && _results.Any())
                {
-                   string fileName = string.Format("{0}{1}{2}{3}{4}{5}{6}{7}{8}.log", "GameOfLife_", DateTime.Now.Year,
-                                                   DateTime.Now.Month, DateTime.Now.Day, "_", DateTime.Now.ToString("hh_mm"),
-                                                   "_sample_size_", _sampleSize, "_results");
 
-                   string resultsFile = Path.Combine(_logDir, fileName);
+                   string resultsFile = Path.Combine(_logDir, _logFileName + "_results.log");
                    using (var fs = new FileStream(resultsFile, FileMode.Create))
                    using (var fw = new StreamWriter(fs))
                    {
