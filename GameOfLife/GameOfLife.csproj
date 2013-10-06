@@ -48,6 +48,7 @@
     <Compile Include="Domain\Cell.cs" />
     <Compile Include="Domain\Health.cs" />
     <Compile Include="Seeders\PrimeSeed.cs" />
+    <Compile Include="Seeders\SquareRootSeed.cs" />
     <Compile Include="Simulators\ConcurrentBagSimulator.cs" />
     <Compile Include="Simulators\ConcurrentQueueSimulator.cs" />
     <Compile Include="Simulators\ConcurrentStackSimulator.cs" />

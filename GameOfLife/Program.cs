@@ -245,20 +245,25 @@ namespace GameOfLife
                    WriteLog("");
                    WriteLog(seed.GetSeed());
                    return seed;
+               case "p":
+                   _runContinousSimulationAtEnd = true;
+                   MaxOutWindow();
+                   seed = new PrimeSeed(Console.LargestWindowHeight - 5, Console.LargestWindowWidth - 5);
+                   WriteLog("Prime Sample");
+                   WriteLog(seed.GetSeed());
+                   return seed;
                case "r":
                    _runContinousSimulationAtEnd = true;
-                   Console.SetWindowSize(Console.LargestWindowWidth-5, Console.LargestWindowHeight-5);
+                   MaxOutWindow();
                    seed = new RandomSeed(Console.LargestWindowHeight - 5, Console.LargestWindowWidth - 5);
-                   WriteLog(string.Format("Window Sized to : {0} {1}", Console.LargestWindowHeight - 5, Console.LargestWindowWidth - 5));
                    WriteLog("Random Sample");
                    WriteLog(seed.GetSeed());
                    return seed;
-               case "p":
+               case "s":
                    _runContinousSimulationAtEnd = true;
-                   Console.SetWindowSize(Console.LargestWindowWidth - 5, Console.LargestWindowHeight - 5);
-                   seed = new PrimeSeed(Console.LargestWindowHeight - 5, Console.LargestWindowWidth - 5);
-                   WriteLog(string.Format("Window Sized to : {0} {1}", Console.LargestWindowHeight - 5, Console.LargestWindowWidth - 5));
-                   WriteLog("Prime Sample");
+                   MaxOutWindow();
+                   seed = new SquareRootSeed(100000);
+                   WriteLog("SquareRoot Sample");
                    WriteLog(seed.GetSeed());
                    return seed;
                default:
@@ -276,6 +281,12 @@ namespace GameOfLife
 
            Console.ForegroundColor = ConsoleColor.White;
            throw new InvalidDataException("No sample");
+       }
+
+       private static void MaxOutWindow()
+       {
+           Console.SetWindowSize(Console.LargestWindowWidth - 5, Console.LargestWindowHeight - 5);
+           WriteLog(string.Format("Window Sized to : {0} {1}", Console.LargestWindowHeight - 5, Console.LargestWindowWidth - 5));
        }
 
        private static void PrintResult(IEnumerable<Cell> result)
@@ -407,7 +418,9 @@ namespace GameOfLife
            Console.WriteLine("-- '1' for test sample 1");
            Console.WriteLine("-- '2' for test sample 2");
            Console.WriteLine("-- 'g' for glider gun");
+           Console.WriteLine("-- 'p' for a prime numbers sample");
            Console.WriteLine("-- 'r' for a random sample");
+           Console.WriteLine("-- 's' for a square root sample");
            Console.WriteLine("-- or paste a file path for text file input");
            Console.ForegroundColor = ConsoleColor.White;
        }
