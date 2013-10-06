@@ -120,7 +120,7 @@ namespace GameOfLife
                }
                else
                {
-                   simulator = typeof(LargeSimulator).Name;
+                   simulator = typeof(ConcurrentStackSimulator).Name;
                }
                BenchmarkSimulator(simulator, items,ROUNDS);
                WriteLog(string.Format("Time taken: {0}", _simulator.TimeTakenMessage));
