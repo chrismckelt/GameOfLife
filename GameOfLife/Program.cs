@@ -65,10 +65,14 @@ namespace GameOfLife
                if (_verifySample1) round = ROUNDS;
                do
                {
-                   // small
                    BenchmarkSimulator(typeof(IndexedSimulator).Name, items, round);
                    VerifySample1();
                    _results.Add(new Result(typeof(IndexedSimulator).Name, round, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
+
+                   BenchmarkSimulator(typeof(IndexedParallelSimulator).Name, items, round);
+                   VerifySample1();
+                   _results.Add(new Result(typeof(IndexedParallelSimulator).Name, round, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
+
                    BenchmarkSimulator(typeof(ListSimulator).Name, items, round);
                    VerifySample1();
                    _results.Add(new Result(typeof(ListSimulator).Name, round, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
@@ -76,7 +80,6 @@ namespace GameOfLife
                    VerifySample1();
                    _results.Add(new Result(typeof(HashSetSimulator).Name, round, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
 
-                   // large
                    BenchmarkSimulator(typeof(ConcurrentBagSimulator).Name, items, round);
                    VerifySample1();
                    _results.Add(new Result(typeof(ConcurrentBagSimulator).Name, round, _simulator.TimeTake, _simulator.TimeTakeForCalculations));
@@ -167,34 +170,38 @@ namespace GameOfLife
 
        private static void BenchmarkSimulator(string simulator, Cell[] items, int rounds)
        {
-               if (simulator == typeof (IndexedSimulator).Name)
-               {
-                   _simulator = new IndexedSimulator(rounds, items);
-               }
-               else if (simulator == typeof (ListSimulator).Name)
-               {
-                   _simulator = new ListSimulator(rounds, items);
-               }
-               else if (simulator == typeof (HashSetSimulator).Name)
-               {
-                   _simulator = new HashSetSimulator(rounds, items);
-               }
-               else if (simulator == typeof(ConcurrentStackSimulator).Name)
-               {
-                   _simulator = new ConcurrentStackSimulator(rounds, items);
-               }
-               else if (simulator == typeof(ConcurrentQueueSimulator).Name)
-               {
-                   _simulator = new ConcurrentQueueSimulator(rounds, items);
-               }
-               else if (simulator == typeof(ConcurrentBagSimulator).Name)
-               {
-                   _simulator = new ConcurrentBagSimulator(rounds, items);
-               }
-               else
-               {
-                   throw new ArgumentException(simulator + " not found");
-               }
+            if (simulator == typeof(IndexedSimulator).Name)
+            {
+            _simulator = new IndexedSimulator(rounds, items);
+            }
+            else if (simulator == typeof(IndexedParallelSimulator).Name)
+            {
+            _simulator = new IndexedParallelSimulator(rounds, items);
+            }
+            else if (simulator == typeof (ListSimulator).Name)
+            {
+                _simulator = new ListSimulator(rounds, items);
+            }
+            else if (simulator == typeof (HashSetSimulator).Name)
+            {
+                _simulator = new HashSetSimulator(rounds, items);
+            }
+            else if (simulator == typeof(ConcurrentStackSimulator).Name)
+            {
+                _simulator = new ConcurrentStackSimulator(rounds, items);
+            }
+            else if (simulator == typeof(ConcurrentQueueSimulator).Name)
+            {
+                _simulator = new ConcurrentQueueSimulator(rounds, items);
+            }
+            else if (simulator == typeof(ConcurrentBagSimulator).Name)
+            {
+                _simulator = new ConcurrentBagSimulator(rounds, items);
+            }
+            else
+            {
+                throw new ArgumentException(simulator + " not found");
+            }
 
                _simulator.OnNotifyMessage += msg => Program.WriteLog(msg, true, true);
                _simulator.OnNotifyResult += PrintResult;

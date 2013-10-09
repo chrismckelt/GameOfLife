@@ -52,6 +52,7 @@
     <Compile Include="Simulators\ConcurrentBagSimulator.cs" />
     <Compile Include="Simulators\ConcurrentQueueSimulator.cs" />
     <Compile Include="Simulators\ConcurrentStackSimulator.cs" />
+    <Compile Include="Simulators\IndexedParallelSimulator.cs" />
     <Compile Include="Simulators\HashSetSimulator.cs" />
     <Compile Include="Simulators\IndexedSimulator.cs" />
     <Compile Include="Simulators\LargeDataSimulator.cs" />
